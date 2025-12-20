@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NIFTY Forecast Dashboard</title>
+
+<!-- 🔥 Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: Arial, sans-serif;
+}
+
+/* 🔐 LOGIN SCREEN */
+#loginScreen {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f2f2f2;
+}
+
+#loginBox {
+  background: white;
+  padding: 25px;
+  width: 300px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 0 15px rgba(0,0,0,0.3);
+}
+
+#loginBox input {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 10px;
+}
+
+#loginBox button {
+  width: 48%;
+  padding: 8px;
+  margin: 5px 1%;
+  cursor: pointer;
+}
+
+/* 📊 CHART SCREEN */
+#chartScreen {
+  display: none;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* Investing.com iframe */
+#investChart {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  z-index: 1;
+}
+
+/* 🔮 Forecast overlay */
+#forecastOverlay {
+  position: absolute;
+  top: -40px;        /* move up/down */
+  left: -20px;       /* move left/right */
+  width: 105%;       /* zoom */
+  height: 105%;
+  object-fit: contain;
+  z-index: 2;
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* 🎚 Opacity slider */
+#controls {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 3;
+  background: rgba(0,0,0,0.6);
+  padding: 10px;
+  border-radius: 6px;
+  color: white;
+
+
+
+}
+</style>
+</head>
+
+<body>
+
+<!-- 🔐 LOGIN -->
+<div id="loginScreen">
+  <div id="loginBox">
+    <h3>Login / Sign Up</h3>
+    <input id="email" type="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Password">
+    <button id="signupBtn" type="button">Sign Up</button>
+    <button id="loginBtn" type="button">Login</button>
+  </div>
+</div>
+
+<!-- 📊 CHART -->
+<div id="chartScreen">
+
+  <!-- 🎚 Controls -->
+
+
+<div id="controls">
+  <div>Forecast Opacity</div>
+  <input id="opacitySlider" type="range" min="0" max="100" value="35">
+
+  <div>Forecast Zoom</div>
+  <input id="zoomSlider" type="range" min="90" max="130" value="100">
+
+  <div>Move X</div>
+  <input id="xSlider" type="range" min="-300" max="300" value="0">
+
+  <div>Move Y</div>
+  <input id="ySlider" type="range" min="-300" max="300" value="0">
+</div>
+
+  <!-- 📈 Investing.com real chart -->
+  <iframe
+    id="investChart"
+    src="https://ssltvc.investing.com/?pair_ID=8985&height=1100&width=1900&interval=300&plotStyle=area&domain_ID=56&lang_ID=56&timezone_ID=20">
+  </iframe>
+
+  <!-- 🔮 Forecast image -->
+  <img
+    id="forecastOverlay"
+    src="chart.PNG">
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+  /* 🔥 Firebase config (REPLACE) */
+  firebase.initializeApp({
+   
+
+    apiKey: "AIzaSyA22RcIFt5vPfhSUoKMFl1ja6MCXKxv06k",
+    authDomain: "huntorfarm.firebaseapp.com",
+    projectId: "huntorfarm",
+    storageBucket: "huntorfarm.firebasestorage.app",
+    messagingSenderId: "568472349794",
+    appId: "1:568472349794:web:d753d6976166b968ce753b"
+  });
+
+  const auth = firebase.auth();
+
+  const loginScreen = document.getElementById("loginScreen");
+  const chartScreen = document.getElementById("chartScreen");
+
+  function showChart() {
+    loginScreen.style.display = "none";
+    chartScreen.style.display = "block";
+  }
+
+  /* 🆕 SIGN UP */
+  signupBtn.onclick = () => {
+    auth.createUserWithEmailAndPassword(email.value, password.value)
+      .then(showChart)
+      .catch(e => alert(e.message));
+  };
+
+  /* 🔑 LOGIN */
+  loginBtn.onclick = () => {
+    auth.signInWithEmailAndPassword(email.value, password.value)
+      .then(showChart)
+      .catch(e => alert(e.message));
+  };
+
+  /* 🔁 Auto-login */
+  auth.onAuthStateChanged(user => {
+    if (user) showChart();
+  });
+
+  /* 🎚 Opacity control */
+  opacitySlider.oninput = function () {
+    forecastOverlay.style.opacity = this.value / 100;
+  };
+
+zoomSlider.oninput = function () {
+    forecastOverlay.style.width  = this.value + "%";
+    forecastOverlay.style.height = this.value + "%";
+  };
+
+  xSlider.oninput = function () {
+    forecastOverlay.style.left = this.value + "px";
+  };
+
+  ySlider.oninput = function () {
+    forecastOverlay.style.top = this.value + "px";
+  };
+
+});
+</script>
+
+</body>
+</html>
