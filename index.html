@@ -1,73 +1,73 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
+
   <title>Forecast Chart</title>
 
-  <!-- Firebase v8 (stable for simple apps) -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-
   <style>
-    body {
-      font-family: Arial;
-      background: #111;
-      color: #eee;
+    /* ALL CSS GOES HERE */
+
+    html, body {
       margin: 0;
-    }
-
-    #authBox {
-      max-width: 320px;
-      margin: 80px auto;
-      padding: 20px;
-      background: #1c1c1c;
-      border-radius: 8px;
-    }
-
-    input, button {
+      padding: 0;
       width: 100%;
-      margin: 6px 0;
-      padding: 10px;
-      font-size: 14px;
-    }
-
-    button {
-      cursor: pointer;
+      height: 100%;
+      overflow: hidden;
     }
 
     #chartSection {
-      display: none;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
     }
 
-    #logoutBtn {
+    #chartWrapper {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #realChart {
+      width: 100%;
+      height: 100%;
+      border: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+
+    #forecastOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0.35;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    #controls {
       position: fixed;
-      top: 10px;
-      right: 10px;
-      width: auto;
+      top: 20px;
+      left: 20px;
+      background: rgba(0,0,0,0.75);
+      color: white;
+      padding: 10px;
+      z-index: 9999;
+      font-size: 12px;
     }
 
-#controls {
-  position: fixed;
-  bottom: 20px;
-  left: 20px;
-  background: rgba(0,0,0,0.75);
-  padding: 10px;
-  color: #fff;
-  z-index: 9999;
-}
-
-#controls label {
-  display: block;
-  font-size: 12px;
-  margin-top: 5px;
-}
-
-
- #forecastOverlay {
-    pointer-events: none;
-     }
+    #controls input {
+      width: 150px;
+    }
   </style>
 </head>
+
 
 <body>
 
@@ -92,31 +92,38 @@
 
 <div id="chartSection">
 
-  <!-- CONTROLS (clickable) -->
+<button
+  id="logoutBtn"
+  style="position:fixed;top:10px;right:10px;z-index:10000;">
+  Logout
+</button>
+
+
+  <!-- CONTROLS -->
   <div id="controls">
     Opacity
-    <input type="range" id="opacitySlider" min="0" max="1" step="0.05" value="0.35">
+    <input type="range" id="opacitySlider" min="0" max="1" step="0.05" value="0.35"><br>
 
     X
-    <input type="range" id="xSlider" min="-500" max="500" value="0">
+    <input type="range" id="xSlider" min="-500" max="500" value="0"><br>
 
     Y
-    <input type="range" id="ySlider" min="-300" max="300" value="0">
+    <input type="range" id="ySlider" min="-300" max="300" value="0"><br>
 
     Zoom
     <input type="range" id="zoomSlider" min="50" max="150" value="100">
   </div>
 
-  <!-- CHART WRAPPER -->
+  <!-- CHART -->
   <div id="chartWrapper">
-
-    <!-- REAL CHART -->
     <iframe
-      id="realChart"
-      src="https://ssltvc.investing.com/?pair_ID=8985&interval=300">
-    </iframe>
+  id="realChart"
+  src="https://ssltvc.investing.com/?pair_ID=8985&interval=300"
+  width="100%"
+  height="100%"
+  frameborder="0">
+</iframe>
 
-    <!-- FORECAST OVERLAY -->
     <img
       id="forecastOverlay"
       src="chart.PNG">
@@ -125,7 +132,10 @@
 </div>
 
 
+
 <script>
+
+// --- CONTROLS LOGIC (BOTTOM OF SCRIPT) ---
 
 const opacitySlider = document.getElementById("opacitySlider");
 const xSlider = document.getElementById("xSlider");
@@ -136,13 +146,16 @@ const forecastOverlay = document.getElementById("forecastOverlay");
 function updateOverlay() {
   forecastOverlay.style.opacity = opacitySlider.value;
   forecastOverlay.style.transform =
-    `translate(${xSlider.value}px, ${ySlider.value}px) scale(${zoomSlider.value/100})`;
+    `translate(${xSlider.value}px, ${ySlider.value}px) scale(${zoomSlider.value / 100})`;
 }
 
 opacitySlider.oninput = updateOverlay;
 xSlider.oninput = updateOverlay;
 ySlider.oninput = updateOverlay;
 zoomSlider.oninput = updateOverlay;
+
+
+
 
   // 🔥 Firebase config
   const firebaseConfig = {
@@ -211,6 +224,9 @@ zoomSlider.oninput = updateOverlay;
     }
   });
 </script>
+
+
+
 
 </body>
 </html>
