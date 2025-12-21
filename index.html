@@ -46,6 +46,23 @@
       width: auto;
     }
 
+#controls {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  background: rgba(0,0,0,0.75);
+  padding: 10px;
+  color: #fff;
+  z-index: 9999;
+}
+
+#controls label {
+  display: block;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+
  #forecastOverlay {
     pointer-events: none;
      }
@@ -71,42 +88,62 @@
 </div>
 
 <!-- 📊 CHART UI -->
+
+
 <div id="chartSection">
-  <button id="logoutBtn">Logout</button>
 
-  <!-- Your existing chart wrapper -->
-  <div id="chartWrapper" style="position:relative; width:1900px; height:1100px;">
+  <!-- CONTROLS (clickable) -->
+  <div id="controls">
+    Opacity
+    <input type="range" id="opacitySlider" min="0" max="1" step="0.05" value="0.35">
 
-  <!-- REAL CHART (CLICKABLE) -->
-  <iframe
-    id="realChart"
-    src="https://ssltvc.investing.com/?pair_ID=8985&interval=300"
-    width="100%"
-    height="100%"
-    frameborder="0"
-    style="position:relative; z-index:1;">
-  </iframe>
+    X
+    <input type="range" id="xSlider" min="-500" max="500" value="0">
 
-    <!-- Forecast overlay -->
+    Y
+    <input type="range" id="ySlider" min="-300" max="300" value="0">
 
+    Zoom
+    <input type="range" id="zoomSlider" min="50" max="150" value="100">
+  </div>
+
+  <!-- CHART WRAPPER -->
+  <div id="chartWrapper">
+
+    <!-- REAL CHART -->
+    <iframe
+      id="realChart"
+      src="https://ssltvc.investing.com/?pair_ID=8985&interval=300">
+    </iframe>
+
+    <!-- FORECAST OVERLAY -->
     <img
       id="forecastOverlay"
-      src="chart.PNG"
-      style="
-      position:absolute;
-      top:0;
-      left:0;
-      width:100%;
-      height:100%;
-      opacity:0.35;
-      z-index:2;
-      pointer-events:none;
-    ">
-   
+      src="chart.PNG">
   </div>
+
 </div>
 
+
 <script>
+
+const opacitySlider = document.getElementById("opacitySlider");
+const xSlider = document.getElementById("xSlider");
+const ySlider = document.getElementById("ySlider");
+const zoomSlider = document.getElementById("zoomSlider");
+const forecastOverlay = document.getElementById("forecastOverlay");
+
+function updateOverlay() {
+  forecastOverlay.style.opacity = opacitySlider.value;
+  forecastOverlay.style.transform =
+    `translate(${xSlider.value}px, ${ySlider.value}px) scale(${zoomSlider.value/100})`;
+}
+
+opacitySlider.oninput = updateOverlay;
+xSlider.oninput = updateOverlay;
+ySlider.oninput = updateOverlay;
+zoomSlider.oninput = updateOverlay;
+
   // 🔥 Firebase config
   const firebaseConfig = {
     
