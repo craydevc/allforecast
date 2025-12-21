@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Forecast + Real Chart</title>
-
-<!-- CSS -->
 <style>
 html, body {
   margin: 0;
@@ -160,13 +158,45 @@ html, body {
 
 </div>
 
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<!-- Firebase v12 Modular SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+  import { 
+    getAuth, 
+    signInWithEmailAndPassword, 
+    createUserWithEmailAndPassword,
+    sendPasswordResetEmail,
+    GoogleAuthProvider,
+    signInWithPopup,
+    onAuthStateChanged,
+    signOut
+  } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
-<!-- JS -->
-<script>
-  // ---------------- CONTROLS ----------------
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyA22RcIFt5vPfhSUoKMFl1ja6MCXKxv06k",
+    authDomain: "huntorfarm.firebaseapp.com",
+    projectId: "huntorfarm",
+    storageBucket: "huntorfarm.appspot.com",
+    messagingSenderId: "568472349794",
+    appId: "1:568472349794:web:d753d6976166b968ce753b"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  // DOM refs
+  const authBox = document.getElementById("authBox");
+  const chartSection = document.getElementById("chartSection");
+  const email = document.getElementById("email");
+  const password = document.getElementById("password");
+  const loginBtn = document.getElementById("loginBtn");
+  const signupBtn = document.getElementById("signupBtn");
+  const forgotBtn = document.getElementById("forgotBtn");
+  const googleBtn = document.getElementById("googleBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+
+  // Controls
   const opacitySlider = document.getElementById("opacitySlider");
   const xSlider = document.getElementById("xSlider");
   const ySlider = document.getElementById("ySlider");
@@ -183,58 +213,35 @@ html, body {
   ySlider.oninput = updateOverlay;
   zoomSlider.oninput = updateOverlay;
 
-  // ---------------- FIREBASE ----------------
-  const firebaseConfig = {
-    apiKey: "AIzaSyA22RcIFt5vPfhSUoKMFl1ja6MCXKxv06k",
-    authDomain: "huntorfarm.firebaseapp.com",
-    projectId: "huntorfarm",
-    storageBucket: "huntorfarm.appspot.com",
-    messagingSenderId: "568472349794",
-    appId: "1:568472349794:web:d753d6976166b968ce753b"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-
-  // ---------------- UI ELEMENTS ----------------
-  const authBox = document.getElementById("authBox");
-  const chartSection = document.getElementById("chartSection");
-  const loginBtn = document.getElementById("loginBtn");
-  const signupBtn = document.getElementById("signupBtn");
-  const forgotBtn = document.getElementById("forgotBtn");
-  const googleBtn = document.getElementById("googleBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const email = document.getElementById("email");
-  const password = document.getElementById("password");
-
-  // ---------------- AUTH FUNCTIONS ----------------
+  // ---------------- AUTH ----------------
   loginBtn.onclick = () => {
-    auth.signInWithEmailAndPassword(email.value, password.value)
+    signInWithEmailAndPassword(auth, email.value, password.value)
       .catch(err => alert(err.message));
   };
 
   signupBtn.onclick = () => {
-    auth.createUserWithEmailAndPassword(email.value, password.value)
+    createUserWithEmailAndPassword(auth, email.value, password.value)
       .then(() => alert("Account created"))
       .catch(err => alert(err.message));
   };
 
   forgotBtn.onclick = () => {
     if (!email.value) { alert("Enter email first"); return; }
-    auth.sendPasswordResetEmail(email.value)
+    sendPasswordResetEmail(auth, email.value)
       .then(() => alert("Password reset email sent"))
       .catch(err => alert(err.message));
   };
 
-  const provider = new firebase.auth.GoogleAuthProvider();
   googleBtn.onclick = () => {
-    auth.signInWithPopup(provider)
+    const provider = new GoogleAuthProvider();
+    signInWithPopup(auth, provider)
       .catch(err => alert(err.message));
   };
 
-  logoutBtn.onclick = () => auth.signOut();
+  logoutBtn.onclick = () => signOut(auth);
 
   // ---------------- AUTO LOGIN ----------------
-  auth.onAuthStateChanged(user => {
+  onAuthStateChanged(auth, (user) => {
     if (user) {
       authBox.style.display = "none";
       chartSection.style.display = "block";
