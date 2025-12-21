@@ -250,6 +250,14 @@ html, body {
       chartSection.style.display = "none";
     }
   });
+
+  // ---------------- RESIZE IFRAME ----------------
+  window.addEventListener('resize', () => {
+    const wrapper = document.getElementById('chartWrapper');
+    const iframe = document.getElementById('realChart');
+    iframe.style.width = wrapper.offsetWidth + 'px';
+    iframe.style.height = wrapper.offsetHeight + 'px';
+  });
 </script>
 
 </body>
