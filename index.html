@@ -45,6 +45,10 @@
       right: 10px;
       width: auto;
     }
+
+ #forecastOverlay {
+    pointer-events: none;
+     }
   </style>
 </head>
 
@@ -72,22 +76,33 @@
 
   <!-- Your existing chart wrapper -->
   <div id="chartWrapper" style="position:relative; width:1900px; height:1100px;">
-    <iframe
-      src="https://ssltvc.investing.com/?pair_ID=8985&interval=300"
-      width="100%"
-      height="100%"
-      frameborder="0">
-    </iframe>
+
+  <!-- REAL CHART (CLICKABLE) -->
+  <iframe
+    id="realChart"
+    src="https://ssltvc.investing.com/?pair_ID=8985&interval=300"
+    width="100%"
+    height="100%"
+    frameborder="0"
+    style="position:relative; z-index:1;">
+  </iframe>
 
     <!-- Forecast overlay -->
 
     <img
       id="forecastOverlay"
       src="chart.PNG"
-      style="position:absolute; top:0; left:0; opacity:0.35;">
-    #forecastOverlay {
-    pointer-events: none;
-     }
+      style="
+      position:absolute;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      opacity:0.35;
+      z-index:2;
+      pointer-events:none;
+    ">
+   
   </div>
 </div>
 
