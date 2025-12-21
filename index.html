@@ -8,38 +8,36 @@
   <style>
     /* ALL CSS GOES HERE */
 
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-    }
+   html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
 
-    #chartSection {
-      width: 100vw;
-      height: 100vh;
-      position: relative;
-     display: none;
-    }
+#chartSection {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: black;
+   display: none;
+}
 
-    #chartWrapper {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-    }
+#chartWrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
 
-    #realChart {
-      width: 100%;
-      height: 100%;
-      border: none;
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 1;
-    }
+#realChart {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
 
     #forecastOverlay {
       position: absolute;
@@ -66,6 +64,17 @@
     #controls input {
       width: 150px;
     }
+
+#authBox {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  background: white;
+  padding: 15px;
+  z-index: 10000;
+}
+
+
   </style>
 </head>
 
@@ -216,14 +225,15 @@ zoomSlider.oninput = updateOverlay;
 
   // ✅ Auth state listener (MOST IMPORTANT)
   auth.onAuthStateChanged(user => {
-    if (user) {
-      authBox.style.display = "none";
-      chartSection.style.display = "block";
-    } else {
-      authBox.style.display = "block";
-      chartSection.style.display = "none";
-    }
-  });
+  if (user) {
+    authBox.style.display = "none";
+    chartSection.style.display = "block";
+  } else {
+    authBox.style.display = "block";
+    chartSection.style.display = "none";
+  }
+});
+
 </script>
 
 
