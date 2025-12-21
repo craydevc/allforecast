@@ -61,14 +61,15 @@ html, body {
 }
 
 #realChart {
-  width: 100%;
-  height: 100%;
-  border: none;
   position: absolute;
   top: 0;
   left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
   z-index: 1;
 }
+
 
 #forecastOverlay {
   position: absolute;
@@ -152,7 +153,17 @@ html, body {
 
   <!-- CHART -->
   <div id="chartWrapper">
-    <iframe id="realChart" src="https://ssltvc.investing.com/?pair_ID=8985&interval=300"></iframe>
+    <iframe
+  id="realChart"
+  src="https://ssltvc.investing.com/?pair_ID=8985
+  &height=1100
+  &width=1900
+  &interval=300
+  &plotStyle=area
+  &domain_ID=56
+  &lang_ID=56
+  &timezone_ID=20"
+    ></iframe>
     <img id="forecastOverlay" src="chart.PNG">
   </div>
 
