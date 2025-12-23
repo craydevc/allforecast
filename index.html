@@ -71,6 +71,8 @@ html, body {
 }
 
 
+
+
 #forecastOverlay {
   position: absolute;
   top: 0;
@@ -80,6 +82,19 @@ html, body {
   opacity: 0.35;
   z-index: 2;
   pointer-events: none;
+}
+
+.forecast {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+#forecastSelector {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 1000;
 }
 
 /* CONTROLS */
@@ -169,6 +184,7 @@ html, body {
   &lang_ID=56
   &timezone_ID=20"
     ></iframe>
+     <img id="forecastOverlay" src="chart.PNG">
     <img class="forecast" src="forecast1.png" />
   <img class="forecast" src="forecast2.png" />
   </div>
@@ -289,6 +305,20 @@ html, body {
   const xSlider = document.getElementById("xSlider");
   const ySlider = document.getElementById("ySlider");
   const zoomSlider = document.getElementById("zoomSlider");
+
+//added
+const forecasts = document.querySelectorAll(".forecast");
+let activeForecast = 0;
+
+// show first forecast by default
+forecasts.forEach((f, i) => f.style.display = i === 0 ? "block" : "none");
+
+function showForecast(index) {
+  forecasts.forEach(f => (f.style.display = "none"));
+  forecasts[index].style.display = "block";
+  activeForecast = index;
+}
+//addedends
   const forecastOverlay = document.getElementById("forecastOverlay");
 
   function updateOverlay() {
