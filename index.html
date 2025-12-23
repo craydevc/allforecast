@@ -71,8 +71,6 @@ html, body {
 }
 
 
-
-
 #forecastOverlay {
   position: absolute;
   top: 0;
@@ -82,19 +80,6 @@ html, body {
   opacity: 0.35;
   z-index: 2;
   pointer-events: none;
-}
-
-.forecast {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-#forecastSelector {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  z-index: 1000;
 }
 
 /* CONTROLS */
@@ -171,11 +156,6 @@ html, body {
     <input type="range" id="zoomSlider" min="50" max="150" value="100">
   </div>
 
-<div id="forecastSelector">
-  <button onclick="showForecast(0)">F1</button>
-  <button onclick="showForecast(1)">F2</button>
-</div>
-
   <!-- CHART -->
   <div id="chartWrapper">
     <iframe
@@ -189,83 +169,10 @@ html, body {
   &lang_ID=56
   &timezone_ID=20"
     ></iframe>
-     <img id="forecastOverlay" src="chart.PNG">
-    <img class="forecast" src="forecast1.png" />
-  <img class="forecast" src="forecast2.png" />
+    <img id="forecastOverlay" src="chart.PNG">
   </div>
 
 </div>
-<div id="infoSection" style="
-  max-width: 900px;
-  margin: 60px auto;
-  padding: 20px;
-  font-family: Arial, sans-serif;
-  line-height: 1.6;
-  color: #ddd;
-">
-
-  <h2>Market Forecast as Context, Not Signals</h2>
-
-  <p>
-    This platform provides a session-level forecast designed to help traders
-    interpret market structure, validate directional bias, and avoid
-    low-probability trades.
-  </p>
-
-  <p>
-    This is <strong>not</strong> a buy/sell signal service. It is a
-    decision-support overlay intended for disciplined, self-directed traders.
-  </p>
-
-  <h3>How to Use the Forecast</h3>
-
-  <p>
-    Financial markets are probabilistic in nature. AI, ML, and Data Science do
-    not provide certainty — they provide structure.
-  </p>
-
-  <p>
-    The forecast displays an expected session range and directional framework.
-    Users typically wait for real-time price to align with the forecast before
-    participating.
-  </p>
-
-  <p>
-    For example, if a forecast shows a range from <strong>-50 to +150</strong>,
-    many traders focus on capturing a partial move (40–60%) rather than the
-    full range.
-  </p>
-
-  <h3>What This Is / What This Is Not</h3>
-
-  <ul>
-    <li>✔ Market structure and range context</li>
-    <li>✔ Bias validation tool</li>
-    <li>✖ Not a signal service</li>
-    <li>✖ No guaranteed entries or exits</li>
-  </ul>
-
-  <h3>Who This Is For</h3>
-
-  <p>
-    This tool is designed for traders who already understand basic trading
-    mechanics and want additional context before acting.
-  </p>
-
-  <p>
-    If you are looking for guaranteed calls or automated trades, this platform
-    is not suitable.
-  </p>
-
-  <h3>Access & Disclaimer</h3>
-
-  <p>
-    This platform is offered as an analytical and educational tool only. All
-    trading decisions and risks remain solely with the user.
-  </p>
-
-</div>
-
 
 <!-- Firebase v12 Modular SDK -->
 <script type="module">
@@ -310,21 +217,7 @@ html, body {
   const xSlider = document.getElementById("xSlider");
   const ySlider = document.getElementById("ySlider");
   const zoomSlider = document.getElementById("zoomSlider");
-
-//added
-const forecasts = document.querySelectorAll(".forecast");
-let activeForecast = 0;
-
-// show first forecast by default
-forecasts.forEach((f, i) => f.style.display = i === 0 ? "block" : "none");
-
-function showForecast(index) {
-  forecasts.forEach(f => (f.style.display = "none"));
-  forecasts[index].style.display = "block";
-  activeForecast = index;
-}
-//addedends
- // const forecastOverlay = document.getElementById("forecastOverlay");
+  const forecastOverlay = document.getElementById("forecastOverlay");
 
   function updateOverlay() {
     forecastOverlay.style.opacity = opacitySlider.value;
