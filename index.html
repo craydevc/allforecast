@@ -185,6 +185,7 @@ html, body {
     GoogleAuthProvider,
     signInWithPopup,
     onAuthStateChanged,
+    signInAnonymously,
     signOut
   } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
@@ -255,6 +256,16 @@ html, body {
   };
 
   logoutBtn.onclick = () => signOut(auth);
+
+
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    signInAnonymously(auth)
+      .catch((error) => {
+        console.error("Anonymous sign-in failed:", error);
+      });
+  }
+});
 
   // ---------------- AUTO LOGIN ----------------
   onAuthStateChanged(auth, (user) => {
