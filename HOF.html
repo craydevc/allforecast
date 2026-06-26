@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Price Chart</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0e1117; display: flex; justify-content: center; padding: 20px; }
+  #wrap { background: #131722; border-radius: 10px; padding: 14px; font-family: monospace; color: #d1d4dc; width: 100%; max-width: 900px; }
+  #header { display: flex; align-items: center; gap: 16px; margin-bottom: 10px; }
+  #sym { font-size: 15px; font-weight: 600; color: #fff; }
+  #price-display { font-size: 13px; }
+  canvas { display: block; cursor: crosshair; }
+  #chart-area { position: relative; }
+  #tooltip {
+    position: absolute; pointer-events: none;
+    background: rgba(19,23,34,0.92); border: 1px solid #363a45;
+    border-radius: 5px; padding: 6px 10px; font-size: 11px;
+    line-height: 1.6; display: none; white-space: nowrap; z-index: 10;
+  }
+  #footer { display: flex; justify-content: space-between; font-size: 10px; color: #555; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="header">
+    <span id="sym">MY STOCK</span>
+    <span id="price-display"></span>
+  </div>
+  <div id="chart-area">
+    <canvas id="cv"></canvas>
+    <div id="tooltip"></div>
+  </div>
+  <div id="footer">
+    <span id="bar-count"></span>
+    <span>MA(20) <span style="color:#f0b429">●</span></span>
+    <span id="cur-price"></span>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// STEP 1 — YOUR DATA: just paste your close prices here
+// ============================================================
+const closes = [
+  100.00, 101.23, 102.10, 100.85, 103.40, 104.20, 103.75, 105.00,
+  106.30, 105.80, 107.20, 108.00, 107.50, 106.90, 108.40, 109.10,
+  110.00, 109.40, 111.20, 112.00, 111.50, 110.80, 112.30, 113.10,
+  114.00, 113.40, 115.20, 116.00, 115.50, 114.90, 113.40, 112.20,
+  111.00, 112.50, 113.80, 115.00, 114.50, 116.20, 117.00, 116.40,
+  118.20, 119.00, 118.50, 117.90, 119.40, 120.10, 121.00, 120.40,
+  122.20, 123.00, 122.50, 121.90, 123.40, 124.10, 123.00, 122.00,
+  120.50, 119.00, 120.80, 122.00, 123.50, 124.80, 126.00, 125.40,
+  127.20, 128.00, 127.50, 126.90, 128.40, 129.10, 130.00, 129.40,
+  128.00, 127.20, 128.80, 130.00, 131.50, 132.80, 134.00, 133.40,
+  135.20, 136.00, 135.50, 134.90, 136.40, 137.10, 138.00, 137.40,
+  139.20, 140.00, 139.50, 138.90, 140.40, 141.10, 142.00, 141.40,
+  140.00, 138.50, 137.00, 138.80, 140.00, 141.50, 142.80, 144.00,
+  143.40, 145.20, 146.00, 145.50, 144.90, 146.40, 147.10, 148.00,
+  147.40, 149.20, 150.00, 149.50, 148.90, 150.40, 151.10, 152.00,
+  151.40, 153.20, 154.00, 153.50, 152.90, 151.40, 150.20, 149.00,
+  150.50, 151.80, 153.00, 154.50, 155.80, 157.00, 156.40, 158.20,
+  159.00, 158.50, 157.90, 159.40, 160.10, 161.00, 160.40, 162.20,
+  163.00, 162.50, 161.90, 163.40, 164.10, 165.00, 164.40, 163.00,
+  161.50, 160.00, 161.80, 163.00, 164.50, 165.80, 167.00, 166.40,
+  168.20, 169.00, 168.50, 167.90, 169.40, 170.10, 171.00, 170.40,
+  169.00, 167.50, 166.00, 167.80, 169.00, 170.50, 171.80, 173.00,
+  172.40, 174.20, 175.00, 174.50, 173.90, 175.40, 176.10, 177.00,
+  176.40, 178.20, 179.00, 178.50, 177.90, 179.40, 180.10, 181.00,
+  180.40, 179.00, 177.50, 176.00, 177.80, 179.00, 180.50, 181.80,
+  183.00, 182.40, 184.20, 185.00, 184.50, 183.90, 185.40, 186.10,
+  187.00, 186.40, 188.20, 189.00, 188.50, 187.90, 189.40, 190.10,
+  191.00, 190.40, 189.00, 187.50, 186.00, 187.80, 189.00, 190.50,
+  191.80, 193.00, 192.40, 194.20, 195.00, 194.50, 193.90, 195.40,
+  196.10, 197.00, 196.40, 198.20, 199.00, 198.50, 197.90, 196.40,
+  195.20, 194.00, 195.50, 196.80, 198.00, 199.50, 200.80, 202.00,
+  201.40, 203.20, 204.00, 203.50, 202.90, 204.40, 205.10, 206.00,
+  205.40, 207.20, 208.00, 207.50, 206.90, 208.40, 209.10, 210.00,
+  209.40, 208.00, 206.50, 205.00, 206.80, 208.00, 209.50, 210.80,
+  212.00, 211.40, 213.20, 214.00, 213.50, 212.90, 214.40, 215.10,
+  216.00, 215.40, 217.20, 218.00, 217.50, 216.90, 215.40, 214.20,
+  213.00, 214.50, 215.80, 217.00, 218.50, 219.80, 221.00, 220.40,
+  219.00, 217.50, 216.00, 217.80, 219.00, 220.50, 221.80, 223.00,
+  222.40, 224.20, 225.00, 224.50, 223.90, 225.40, 226.10, 227.00,
+  226.40, 228.20, 229.00, 228.50, 227.90, 229.40, 230.10, 231.00,
+  230.40, 229.00, 227.50, 226.00, 227.80, 229.00, 230.50, 231.80,
+  233.00, 232.40, 234.20, 235.00, 234.50, 233.90, 232.40, 231.20,
+  230.00, 231.50, 232.80, 234.00, 235.50, 236.80, 238.00, 237.40,
+  239.20, 240.00, 239.50, 238.90, 240.40, 241.10, 242.00, 241.40,
+  240.00, 238.50, 237.00, 238.80, 240.00, 241.50, 242.80, 244.00,
+  243.40, 245.20, 246.00, 245.00, 244.00, 243.20, 244.80, 246.00
+];
+
+// ============================================================
+// STEP 2 — SETTINGS
+// ============================================================
+const SYMBOL_NAME  = 'MY STOCK';
+const MA_PERIOD    = 20;
+const DEFAULT_BARS = 80;
+
+// ============================================================
+// STEP 3 — BUILD CHART DATA FROM CLOSES ONLY
+// ============================================================
+document.getElementById('sym').textContent      = SYMBOL_NAME;
+document.getElementById('bar-count').textContent = closes.length + ' bars';
+
+// give each point an index label (or swap in real dates if you have them)
+const data = closes.map((c, i) => ({ label: 'Day ' + (i + 1), c }));
+
+// moving average
+const maLine = data.map((_, i) => {
+  if (i < MA_PERIOD - 1) return null;
+  const sum = data.slice(i - MA_PERIOD + 1, i + 1).reduce((a, b) => a + b.c, 0);
+  return +(sum / MA_PERIOD).toFixed(2);
+});
+
+// ============================================================
+// STEP 4 — CANVAS SETUP
+// ============================================================
+const wrap = document.getElementById('wrap');
+const cv   = document.getElementById('cv');
+const ctx  = cv.getContext('2d');
+const tip  = document.getElementById('tooltip');
+
+let W, H;
+const PAD = { L: 10, R: 64, T: 20, B: 30 };
+
+let startIdx   = Math.max(0, data.length - DEFAULT_BARS);
+let visCount   = Math.min(DEFAULT_BARS, data.length);
+let mouseX     = -1, mouseY = -1;
+let isDragging = false, dragStartX = 0, dragStartIdx = 0;
+
+function resize() {
+  W = wrap.clientWidth - 28;
+  H = Math.round(W * 0.50);
+  cv.width = W; cv.height = H;
+  draw();
+}
+
+function visible()   { return data.slice(startIdx, startIdx + visCount); }
+function pxY(price, lo, hi) {
+  return PAD.T + (1 - (price - lo) / (hi - lo)) * (H - PAD.T - PAD.B);
+}
+function pxX(i, cw) { return PAD.L + i * cw + cw / 2; }
+
+// ============================================================
+// STEP 5 — DRAW
+// ============================================================
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#131722';
+  ctx.fillRect(0, 0, W, H);
+
+  const vis = visible();
+  const cw  = (W - PAD.L - PAD.R) / vis.length;
+
+  // price range with padding
+  let lo = Math.min(...vis.map(d => d.c));
+  let hi = Math.max(...vis.map(d => d.c));
+  const pad = (hi - lo) * 0.08;
+  lo -= pad; hi += pad;
+
+  // --- gridlines + right-axis labels ---
+  for (let i = 0; i <= 5; i++) {
+    const y     = PAD.T + i * (H - PAD.T - PAD.B) / 5;
+    const price = hi - i * (hi - lo) / 5;
+
+    ctx.strokeStyle = 'rgba(128,128,128,0.12)';
+    ctx.lineWidth   = 0.5;
+    ctx.beginPath(); ctx.moveTo(PAD.L, y); ctx.lineTo(W - PAD.R, y); ctx.stroke();
+
+    ctx.fillStyle  = '#555';
+    ctx.font       = '10px monospace';
+    ctx.textAlign  = 'left';
+    ctx.fillText(price.toFixed(2), W - PAD.R + 4, y + 4);
+  }
+
+  // --- filled area under the line ---
+  const grad = ctx.createLinearGradient(0, PAD.T, 0, H - PAD.B);
+  grad.addColorStop(0, 'rgba(38,166,154,0.25)');
+  grad.addColorStop(1, 'rgba(38,166,154,0.01)');
+
+  ctx.beginPath();
+  vis.forEach((d, i) => {
+    const x = pxX(i, cw);
+    const y = pxY(d.c, lo, hi);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  // close the path down to the bottom
+  const lastX = pxX(vis.length - 1, cw);
+  const firstX = pxX(0, cw);
+  ctx.lineTo(lastX, H - PAD.B);
+  ctx.lineTo(firstX, H - PAD.B);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // --- price line ---
+  ctx.strokeStyle = '#26a69a';
+  ctx.lineWidth   = 2;
+  ctx.lineJoin    = 'round';
+  ctx.beginPath();
+  vis.forEach((d, i) => {
+    const x = pxX(i, cw);
+    const y = pxY(d.c, lo, hi);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // --- MA line ---
+  ctx.strokeStyle = '#f0b429';
+  ctx.lineWidth   = 1.5;
+  ctx.lineJoin    = 'round';
+  ctx.beginPath();
+  let firstMA = true;
+  vis.forEach((_, i) => {
+    const m = maLine[startIdx + i];
+    if (m === null) return;
+    const x = pxX(i, cw);
+    const y = pxY(m, lo, hi);
+    if (firstMA) { ctx.moveTo(x, y); firstMA = false; }
+    else          { ctx.lineTo(x, y); }
+  });
+  ctx.stroke();
+
+  // --- crosshair ---
+  if (mouseX >= PAD.L && mouseX <= W - PAD.R && mouseY >= PAD.T && mouseY <= H - PAD.B) {
+    ctx.strokeStyle = 'rgba(200,200,200,0.25)';
+    ctx.lineWidth   = 0.7;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(mouseX, PAD.T); ctx.lineTo(mouseX, H - PAD.B); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(PAD.L, mouseY); ctx.lineTo(W - PAD.R, mouseY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // price label on axis
+    const hoverPrice = hi - (mouseY - PAD.T) / (H - PAD.T - PAD.B) * (hi - lo);
+    ctx.fillStyle = '#2a2d3a'; ctx.strokeStyle = '#555'; ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.rect(W - PAD.R + 1, mouseY - 9, PAD.R - 3, 18); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#d1d4dc'; ctx.font = '10px monospace'; ctx.textAlign = 'left';
+    ctx.fillText(hoverPrice.toFixed(2), W - PAD.R + 4, mouseY + 4);
+  }
+
+  // --- last price label pinned to axis ---
+  const last  = data[Math.min(startIdx + visCount - 1, data.length - 1)];
+  const lcy   = pxY(last.c, lo, hi);
+  ctx.fillStyle = '#26a69a';
+  ctx.beginPath(); ctx.rect(W - PAD.R + 1, lcy - 9, PAD.R - 3, 18); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'left';
+  ctx.fillText(last.c.toFixed(2), W - PAD.R + 4, lcy + 4);
+
+  document.getElementById('cur-price').style.color = '#26a69a';
+  document.getElementById('cur-price').textContent = last.c.toFixed(2);
+
+  // --- x-axis labels ---
+  ctx.fillStyle = '#555'; ctx.font = '10px monospace'; ctx.textAlign = 'center';
+  const step = Math.max(1, Math.floor(vis.length / 6));
+  vis.forEach((d, i) => {
+    if (i % step === 0) ctx.fillText(d.label, pxX(i, cw), H - PAD.B + 14);
+  });
+}
+
+// ============================================================
+// STEP 6 — INTERACTIONS
+// ============================================================
+cv.addEventListener('mousemove', e => {
+  const r = cv.getBoundingClientRect();
+  mouseX  = e.clientX - r.left;
+  mouseY  = e.clientY - r.top;
+
+  const vis = visible();
+  const cw  = (W - PAD.L - PAD.R) / vis.length;
+  const i   = Math.floor((mouseX - PAD.L) / cw);
+
+  if (i >= 0 && i < vis.length) {
+    const d = vis[i];
+    const m = maLine[startIdx + i];
+    tip.innerHTML =
+      `<b style="color:#d1d4dc">${d.label}</b><br>` +
+      `Price <b style="color:#26a69a">${d.c.toFixed(2)}</b>` +
+      (m ? `  MA(${MA_PERIOD}) <b style="color:#f0b429">${m.toFixed(2)}</b>` : '');
+    tip.style.left    = (mouseX + 12 + 140 > W ? mouseX - 160 : mouseX + 12) + 'px';
+    tip.style.top     = Math.max(0, mouseY - 10) + 'px';
+    tip.style.display = 'block';
+
+    document.getElementById('price-display').innerHTML =
+      `<span style="color:#26a69a;font-weight:600">${d.c.toFixed(2)}</span>` +
+      (m ? `  <span style="color:#f0b429;font-size:11px">MA ${m.toFixed(2)}</span>` : '');
+  } else {
+    tip.style.display = 'none';
+  }
+
+  if (isDragging) {
+    const dx    = mouseX - dragStartX;
+    const cw    = (W - PAD.L - PAD.R) / visCount;
+    const shift = Math.round(-dx / cw);
+    startIdx    = Math.max(0, Math.min(data.length - visCount, dragStartIdx + shift));
+  }
+
+  draw();
+});
+
+cv.addEventListener('mouseleave', () => {
+  mouseX = -1; mouseY = -1;
+  tip.style.display = 'none';
+  draw();
+});
+
+cv.addEventListener('mousedown', e => {
+  isDragging   = true;
+  dragStartX   = e.clientX - cv.getBoundingClientRect().left;
+  dragStartIdx = startIdx;
+});
+cv.addEventListener('mouseup', () => { isDragging = false; });
+
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  visCount = Math.max(20, Math.min(data.length, visCount + (e.deltaY > 0 ? 10 : -10)));
+  startIdx = Math.max(0, Math.min(data.length - visCount, startIdx));
+  draw();
+}, { passive: false });
+
+window.addEventListener('resize', resize);
+resize();
+</script>
+</body>
+</html>
