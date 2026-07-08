@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>USA S&P 500 — Multi-Forecast Analyser</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0e1117; color: #d1d4dc; font-family: monospace; padding: 10px; min-height: 100vh; display: flex; flex-direction: column; }
+
+  #topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 6px; flex-shrink: 0; }
+  #topbar h1 { font-size: 14px; color: #fff; font-weight: 700; }
+  #status { font-size: 11px; color: #555; }
+
+  #toolbar { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; flex-shrink: 0; margin-bottom: 6px; }
+  .btn { font-size: 10px; padding: 3px 9px; border-radius: 3px; cursor: pointer; border: 1px solid #363a45; background: #2a2d3a; color: #888; font-family: monospace; }
+  .btn.active { background: #26a69a22; color: #26a69a; border-color: #26a69a66; }
+  .btn:hover { color: #d1d4dc; border-color: #555; }
+  .sep { width: 1px; height: 16px; background: #363a45; margin: 0 2px; }
+
+  #chart-area { position: relative; height: 340px; flex-shrink: 0; margin-bottom: 8px; }
+  canvas { display: block; cursor: crosshair; }
+  #tooltip { position: absolute; pointer-events: none; background: rgba(19,23,34,0.96); border: 1px solid #363a45; border-radius: 5px; padding: 7px 11px; font-size: 11px; line-height: 1.9; display: none; white-space: nowrap; z-index: 10; }
+
+  /* comparison table */
+  #analysis { flex: 1; overflow-y: auto; }
+  .section-title { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px; padding: 6px 0 4px 0; border-bottom: 1px solid #1e222d; margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 12px; }
+  th { background: #131722; color: #555; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; padding: 5px 8px; text-align: center; border-bottom: 1px solid #1e222d; position: sticky; top: 0; }
+  th:first-child { text-align: left; }
+  td { padding: 4px 8px; border-bottom: 1px solid #0e111788; text-align: center; }
+  td:first-child { text-align: left; color: #555; font-size: 10px; }
+  tr:hover td { background: #131722; }
+  .winner { background: #26a69a11 !important; }
+  .best { color: #26a69a; font-weight: 700; }
+  .good { color: #26a69a; }
+  .mid  { color: #f0b429; }
+  .bad  { color: #ef5350; }
+  .rank1 { color: #f0b429; font-size: 14px; }
+  .rank2 { color: #888; font-size: 14px; }
+  .rank3 { color: #cd7f32; font-size: 14px; }
+
+  #footer { display: flex; justify-content: space-between; font-size: 10px; color: #555; margin-top: 5px; flex-wrap: wrap; gap: 4px; flex-shrink: 0; }
+  #legend { display: flex; gap: 12px; flex-wrap: wrap; }
+  .leg { display: flex; align-items: center; gap: 5px; }
+  .leg-dot { width: 10px; height: 3px; border-radius: 1px; }
+  #hover-info { font-size: 11px; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <h1>📈 USAS&P 500 — Multi-Forecast Analyser</h1>
+  <span id="status">Loading...</span>
+</div>
+
+<div id="toolbar">
+  <button class="btn active" onclick="setTF(1,this)">1m</button>
+  <button class="btn"        onclick="setTF(3,this)">3m</button>
+  <button class="btn"        onclick="setTF(5,this)">5m</button>
+  <button class="btn"        onclick="setTF(10,this)">10m</button>
+  <button class="btn"        onclick="setTF(15,this)">15m</button>
+  <button class="btn"        onclick="setTF(30,this)">30m</button>
+  <div class="sep"></div>
+  <button class="btn" onclick="zoom(-1)">＋</button>
+  <button class="btn" onclick="zoom(1)">－</button>
+  <button class="btn" onclick="fitAll()">Fit</button>
+  <div class="sep"></div>
+  <button class="btn active" id="src-live" onclick="setSource('live')">🔴 Live</button>
+  <button class="btn"        id="src-test" onclick="setSource('test')">📋 Test</button>
+  <div class="sep"></div>
+  <span id="hover-info"></span>
+</div>
+
+<div id="chart-area">
+  <canvas id="cv"></canvas>
+  <div id="tooltip"></div>
+</div>
+
+<div id="analysis">
+  <div class="section-title">📊 Forecast Comparison Analysis</div>
+  <table id="tbl">
+    <thead id="tbl-head"></thead>
+    <tbody id="tbl-body"></tbody>
+  </table>
+</div>
+
+<div id="footer">
+  <div id="legend"></div>
+  <span id="bar-count"></span>
+  <span id="last-update"></span>
+</div>
+
+<script>
+// ============================================================
+// YOUR FORECASTS — add as many as you want!
+// name: display name
+// color: line color on chart
+// data: zero-based closes (375 values)
+// ============================================================
+const FORECASTS = [
+  {
+    name: 'Model A:8-Jul-2026',
+    color: '#26a69a',
+    data: [0,
+2.33144075281325,
+3.23091635189212,
+1.43736200732837,
+1.99863478115276,
+0.548680115438401,
+-0.710585723271834,
+5.94013685631671,
+8.63316679996024,
+9.54343610622891,
+7.73369120088137,
+4.70245843198609,
+5.03526440364385,
+7.73908805447536,
+8.28956712111267,
+7.73908805447536,
+10.426721144524,
+10.4213242909291,
+7.37929781484399,
+7.36850410765601,
+10.0885183192704,
+8.27337656032887,
+7.39548837562779,
+9.18364586659754,
+11.3261967436038,
+12.7653577021301,
+10.9718033575664,
+10.0615340512977,
+9.19443957378553,
+9.28078923129669,
+8.07908983092784,
+10.0777246120806,
+6.94215267369236,
+4.12499509737609,
+4.66468045682359,
+-0.721379430461639,
+4.67547416401248,
+4.68087101760648,
+5.60193403106496,
+4.67547416401248,
+1.45355256811126,
+5.95093056350652,
+3.78139541852761,
+3.23091635189212,
+2.35842502078413,
+-1.61545817594651,
+-1.15312771801836,
+-0.710585723271834,
+4.67547416401248,
+4.69706157839028,
+2.86572925866494,
+2.08498443866483,
+2.35302816719013,
+2.34763131359705,
+2.90350723382744,
+2.9844600377437,
+2.88731667304455,
+1.0667780605072,
+1.07217491410302,
+0.188889875807035,
+0.554076969032394,
+-4.32467868037111,
+-2.13355612101532,
+-5.76923649249329,
+-8.45147272894701,
+-11.5042929122201,
+-7.9171842230935,
+-7.80924715120454,
+-6.65791838438327,
+-6.66871209157307,
+-7.89019995512081,
+-13.3032441103778,
+-15.6634680823627,
+-20.1230681025954,
+-19.2397830643004,
+-18.7108914120417,
+-25.557699672232,
+-24.6312398051805,
+-22.8484791678056,
+-21.0549248232419,
+-26.451778417716,
+-26.3384444922312,
+-29.1232209469817,
+-33.1060988997033,
+-37.5836884319178,
+-37.4919419208127,
+-33.0809135829286,
+-28.223745347902,
+-26.4247941497442,
+-27.7110442564262,
+-28.2507296158738,
+-28.5943292947213,
+-33.1132947044953,
+-34.5470588094267,
+-32.1976285446335,
+-28.2561264694696,
+-28.2507296158738,
+-26.8169655109423,
+-27.3458571632009,
+-29.1556020685484,
+-26.8169655109423,
+-30.0496808140315,
+-27.6840599884545,
+-27.6840599884545,
+-29.1502052149526,
+-30.9167752915437,
+-34.8906584882743,
+-38.9311028793381,
+-40.7300540774959,
+-38.1233737913653,
+-41.7374667484655,
+-42.1080506952858,
+-42.6423392011384,
+-45.5872223125243,
+-48.9224778339076,
+-48.4043798888388,
+-44.7902869317395,
+-42.0864632809071,
+-39.3988301908594,
+-40.7300540774959,
+-42.10265384169,
+-45.5872223125243,
+-46.2348447438599,
+-47.1181297821558,
+-46.213257329483,
+-47.4779200217872,
+-51.6155077775511,
+-54.3337230379666,
+-57.3883421724395,
+-58.2662303571415,
+-50.7322227392551,
+-47.107336074966,
+-48.3935861816499,
+-47.0263832710489,
+-43.5310210930293,
+-44.4143061313252,
+-45.335369144781,
+-44.4358935457021,
+-45.329972291187,
+-43.8692239182819,
+-40.8218005886029,
+-42.6477360547333,
+-44.4197029849192,
+-44.4358935457021,
+-39.9331186967129,
+-40.2983057899382,
+-41.7482604556544,
+-40.8271974421968,
+-41.7482604556544,
+-42.9697483192022,
+-43.9016050398486,
+-43.5310210930293,
+-45.6681751164397,
+-46.218654183077,
+-44.7956837853335,
+-40.2875120827493,
+-38.5047514453745,
+-38.4885608845907,
+-39.0228493904442,
+-39.91692813593,
+-39.0228493904442,
+-38.4885608845907,
+-38.4885608845907,
+-36.3136288860178,
+-33.9965797427913,
+-33.1132947044953,
+-31.276565531175,
+-33.0809135829286,
+-31.8432351585961,
+-30.9437595595173,
+-30.0226965460606,
+-29.1556020685484,
+-29.1232209469817,
+-28.6159167091009,
+-30.0496808140315,
+-28.2453327622798,
+-27.3242697488231,
+-28.223745347902,
+-30.4148679072587,
+-30.0226965460606,
+-31.3035497991477,
+-32.2030253982275,
+-31.2819623847708,
+-30.3770899320962,
+-32.7319170504852,
+-33.6152020887812,
+-33.9965797427913,
+-34.8744679274914,
+-33.6421863567539,
+-32.742710757675,
+-34.5362651022388,
+-36.3136288860178,
+-38.4939577381865,
+-38.4831640309967,
+-38.4723703238078,
+-39.3718459228867,
+-39.9439124039009,
+-39.4042270444534,
+-40.3037026435322,
+-41.0898443171291,
+-42.0972569880969,
+-40.8379911493857,
+-37.2508824602592,
+-39.0228493904442,
+-41.6295296765747,
+-42.9697483192022,
+-39.033643097634,
+-39.9331186967129,
+-35.7739435265703,
+-34.9122459026539,
+-33.6421863567539,
+-36.3460100075854,
+-38.1449612057431,
+-37.4919419208127,
+-35.4195501405347,
+-36.3136288860178,
+-36.7111971008117,
+-37.5998789927016,
+-38.4885608845907,
+-38.4993545917805,
+-38.1395643521491,
+-38.9311028793381,
+-39.9493092574967,
+-39.91692813593,
+-38.4831640309967,
+-38.0316272802593,
+-39.3988301908594,
+-36.7111971008117,
+-34.9014521954641,
+-34.8852616346812,
+-34.5416619558328,
+-38.1287706449593,
+-42.0918601345029,
+-39.3880364836696,
+-41.1815908282342,
+-44.7848900781437,
+-47.1289234893457,
+-45.6789688236295,
+-46.2402415974539,
+-47.1451140501285,
+-46.5946349834912,
+-47.488713728977,
+-45.340765998375,
+-46.12690767197,
+-44.7740963709557,
+-48.0176053812347,
+-48.0230022348287,
+-46.2456384510497,
+-45.3191785839981,
+-46.218654183077,
+-43.5256242394335,
+-44.7794932245497,
+-45.3191785839981,
+-43.4284808747334,
+-44.4143061313252,
+-43.7882711143657,
+-43.5472116538131,
+-41.7158793340877,
+-38.4831640309967,
+-40.8325942957927,
+-41.7374667484655,
+-41.2031782426111,
+-39.9331186967129,
+-38.1179769377713,
+-39.91692813593,
+-39.4096238980492,
+-39.3718459228867,
+-39.3934333372654,
+-39.0228493904442,
+-36.3514068611803,
+-35.8117215017328,
+-37.2131044850967,
+-37.6106726998905,
+-37.2454856066643,
+-36.3298194468016,
+-34.8744679274914,
+-35.4411375549116,
+-35.7847372337601,
+-33.6529800639437,
+-33.9965797427913,
+-32.748107611269,
+-34.5146776878601,
+-35.7739435265703,
+-34.9014521954641,
+-35.4357407013176,
+-34.1710780090125,
+-34.7935151235761,
+-36.3190257396136,
+-36.689609686433,
+-37.5944821391076,
+-37.2185013386925,
+-35.7847372337601,
+-35.3332004830218,
+-36.3352163003974,
+-35.806324648137,
+-36.3190257396136,
+-39.4042270444534,
+-41.6295296765747,
+-42.0864632809071,
+-41.7482604556544,
+-42.6207517867606,
+-44.4250998385123,
+-48.3989830352439,
+-47.4725231681932,
+-49.8381439937702,
+-51.0704255645096,
+-50.7268258856611,
+-48.9386683946914,
+-50.1871405262136,
+-52.5041896694402,
+-50.7322227392551,
+-50.1979342334016,
+-50.7106353248782,
+-49.271474366351,
+-48.3935861816499,
+-48.3719987672721,
+-50.7214290320662,
+-49.271474366351,
+-47.3861735106821,
+-48.4043798888388,
+-47.4725231681932,
+-45.6951593844124,
+-43.0021294407697,
+-45.3137817304041,
+-46.2078604758872,
+-49.2876649271348,
+-53.682502704235,
+-54.6629311072302,
+-51.9645043099927,
+-56.9206148609182,
+-55.2242038810564,
+-49.8057628722036,
+-51.637095191928,
+-51.6424920455238,
+-49.8381439937702,
+-46.12690767197,
+-45.3137817304041,
+-44.4197029849192,
+-44.4089092777294,
+-43.5256242394335,
+-41.1707971210444,
+-42.6153549331666,
+-39.922324989524,
+-40.2713215219655,
+-40.2713215219655,
+-37.2454856066643,
+-35.3332004830218,
+-35.4195501405347,
+-35.800927794543,
+-38.1341674985551,
+-38.4723703238078,
+-37.7527898445451,
+-35.806324648137,
+-36.7111971008117,
+-35.4303438477227,
+-34.8798647810872,
+-35.8117215017328,
+-37.6052758462956,
+-36.3460100075854,
+-35.6264295283227,
+-35.6929907226549,
+-36.7004033936219,
+-36.3298194468016,
+-34.0073734499792,
+-33.6421863567539,
+-31.7352980867054,
+-30.9167752915437,
+-33.6421863567539,
+-35.4411375549116,
+-33.6259957959701,
+-33.0755167293337,
+-30.0550776676273,
+-29.1502052149526,
+-25.9174899118634,
+-24.9964268984058,
+-25.0180143127845,
+-25.0018237520007,
+-26.446381564122,
+-26.4571752713109,
+-26.8061718037534,
+-24.086157592139,
+-26.446381564122,
+-25.0018237520007,
+-26.7845843893756,
+-25.4389688931524,
+-25.9120930582676,
+-30.0334902532486,
+-30.0442839604375,
+-30.4094710536629,
+-25.5469059650432,
+-30.0442839604375,
+].slice(0,390)
+  },
+  {
+    // Model B — slightly shifted version for demo
+    // Replace with your real Model B data
+    name: 'Model B-08 July 2026',
+    color: '#f0b429',
+    data: [
+].slice(0,375).map((v,i)=>+(v*(1+Math.sin(i/30)*0.15)).toFixed(2))
+  },
+  {
+    // Model C — another variation for demo
+    // Replace with your real Model C data
+    name: 'Model C: 08 July 2026',
+    color: '#e040fb',
+    data: [
+].slice(0,375).map((v,i)=>+(v*(0.9+Math.cos(i/25)*0.1)).toFixed(2))
+  }
+];
+
+// TEST LIVE DATA — yesterday actual
+const TEST_ACTUAL = [0
+-58.35
+-59.15
+-63.8
+-74.35
+-73.05
+-63.85
+-50.9
+-43.85
+-45.05
+-40.6
+-27.9
+-28.85
+-27.85
+-30.95
+-27.9
+-25.2
+-22.35
+-12.65
+-16.65
+-20
+-26.9
+-17.75
+-21.7
+-15.05
+-16.15
+-19.6
+-26.2
+-23.4
+-30.45
+-38.85
+-34.95
+-40.5
+-44.25
+-46.2
+-45.75
+-40.15
+-32.8
+-35.65
+-39.75
+-38.65
+-48.55
+-45.8
+-35.15
+-40.5
+-42.45
+-35.95
+-38.45
+-45.85
+-46.25
+-60.5
+-57
+-49.8
+-35.2
+-36.35
+-38.15
+-35.95
+-37.75
+-42.25
+-46.55
+-45.05
+-44.65
+-52.95
+-54
+-45.95
+-49
+-54.45
+-34.6
+-33.05
+-35.35
+-36.25
+-30.05
+-27.85
+-30
+-34.15
+-30.55
+-26.9
+-30.3
+-32.25
+-31.9
+-30.95
+-33.1
+-27.9
+-26.2
+-30.7
+-35.5
+-37.05
+-37.2
+-36.3
+-36.4
+-35.3
+-35.55
+-33.25
+-35.45
+-28.6
+-28.55
+-30.7
+-30.95
+-30.95
+-29.8
+-28.8
+-33.95
+-31.1
+-30.95
+-32.4
+-34.9
+-33.3
+-32
+-29.8
+-24.45
+-29.15
+-32.05
+-30.9
+-33.45
+-38.45
+-43.25
+-45.95
+-46.1
+-50.5
+-54.05
+-52.95
+-45.4
+-49.2
+-48.35
+-48.65
+-45.5
+-46.25
+-46.75
+-52.65
+-54.8
+-51.05
+-51.05
+-48.25
+-48.7
+-48.4
+-47.3
+-44.75
+-47.9
+-50.05
+-45.7
+-47.9
+-49.05
+-49.6
+-45
+-45
+-39.95
+-38.7
+-35.4
+-33.7
+-33.6
+-37.4
+-39.15
+-35.5
+-35.45
+-38.35
+-38.05
+-34.3
+-35.2
+-30.4
+-26.55
+-28.45
+-25.35
+-27.3
+-25.75
+-25.15
+-19.5
+-17.7
+-23.15
+-21.85
+-21.05
+-18.55
+-17
+-16
+-9.4
+-11.1
+-11.25
+-13.6
+-10.7
+-9.35
+-3
+-6
+-6.85
+-9.65
+-12
+-9.65
+-8.7
+-10.95
+-16.7
+-16.75
+-16
+-14.8
+-13.3
+-14.45
+-11.5
+-19.4
+-13.5
+-12.15
+-16.65
+-19.95
+-21.9
+-23.7
+-22.4
+-25.15
+-18.65
+-28.4
+-26
+-27.05
+-29.15
+-31.05
+-32.15
+-30.1
+-29.55
+-22.8
+-26.2
+-23.7
+-21.85
+-16.45
+-18.35
+-20.15
+-22.25
+-21.4
+-18.5
+-19.75
+-24.15
+-24.35
+-22.2
+-23.45
+-30.25
+-33.7
+-32.55
+-38.75
+-44.95
+-57.1
+-49.3
+-54.5
+-56.5
+-57.9
+-58.55
+-62.3
+-55.9
+-51.35
+-59.05
+-56.1
+-63.55
+-63
+-60
+-56.3
+-57.6
+-56.9
+-59.8
+-64.45
+-68.5
+-67.2
+-68.85
+-72.25
+-69.7
+-71.05
+-73.35
+-79.1
+-85.1
+-83.85
+-93.5
+-101.55
+-86
+-89.2
+-85.8
+-80.1
+-80.05
+-88.05
+-81.65
+-86.75
+-92.5
+-95.45
+-95.15
+-91.55
+-83.3
+-80.35
+-81.55
+-81.7
+-83.5
+-80.55
+-82.65
+-83.45
+-88.5
+-86.55
+-90.2
+-93.75
+-91.3
+-84.5
+-86.3
+-95.95
+-83
+-82.1
+-84.65
+-84.15
+-84.45
+-86
+-83.7
+-80.7
+-86.65
+-88.25
+-99.15
+-93.8
+-91.4
+-95.65
+-98.75
+-105.35
+-107
+-104.95
+-105.6
+-104.15
+-102.7
+-104.2
+-102.1
+-104.2
+-107.8
+-105.9
+-102.65
+-100.8
+-92.8
+-95.85
+-92.45
+-96.2
+-98.3
+-95
+-96.55
+-98.65
+-103.2
+-103.6
+-105.95
+-104
+-107.6
+-112.1
+-106.25
+-101.45
+-96.9
+-103.25
+-106.3
+-117.7
+-116.3
+-114.1
+-112.25
+-113.65
+-112.7
+-118.15
+-118.9
+-106.35
+-100.3
+-94.65
+-96.4
+-102.05
+-95.2
+-97.75
+-102.55
+-95.7
+-96.6
+-95.75
+-97.45
+-101.6
+-101.4
+-103.55
+-107.5
+-108.85
+-108.55
+-107.35
+-107.6
+-102.95
+-105.75
+-107.05
+-111
+-111.4
+-112.05
+-111.3
+-111.1
+-107.6
+];
+
+// ============================================================
+// SETTINGS
+// ============================================================
+const START_HOUR=9, START_MIN=30;
+const REFRESH_MS=60000;
+const YAHOO_URL='https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?interval=1m&range=1d';
+const PROXIES=[
+  url=>url,
+  url=>`https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url=>`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  url=>`https://thingproxy.freeboard.io/fetch/${url}`,
+];
+
+let liveData=[], currentTF=1, dataSource='test';
+let refreshTimer, countdownTimer, countdownVal=60;
+let lvData=[], fcDataArr=[];
+let startIdx=0, visCount=0;
+let isDragging=false, dragStartX=0, dragStartIdx=0;
+let mouseX=-1, mouseY=-1, W, H;
+
+// ============================================================
+// FETCH
+// ============================================================
+async function tryFetch(url) {
+  for(let i=0;i<PROXIES.length;i++){
+    try{
+      setStatus(`⏳ Trying source ${i+1}/${PROXIES.length}...`,'#f0b429');
+      const res=await fetch(PROXIES[i](url+'&nc='+Date.now()),{mode:'cors'});
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      const text=await res.text();
+      const json=JSON.parse(text);
+      const data=json.contents?JSON.parse(json.contents):json;
+      const closes=data?.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
+      if(!closes||closes.length<2)throw new Error('no closes');
+      const clean=closes.filter(v=>v!=null&&!isNaN(v));
+      if(clean.length<2)throw new Error('empty');
+      return clean;
+    }catch(e){console.warn(`Source ${i+1} failed:`,e.message);}
+  }
+  return null;
+}
+
+function toZero(arr){const o=arr[0];return arr.map(v=>+(v-o).toFixed(2));}
+
+async function fetchAndUpdate(){
+  if(dataSource==='test'){
+    liveData=TEST_ACTUAL;
+    setStatus(`📋 Test mode · ${liveData.length} bars`,'#e040fb');
+    buildAll();renderTable();draw();return;
+  }
+  const raw=await tryFetch(YAHOO_URL);
+  if(raw&&raw.length>1){
+    liveData=toZero(raw);
+    setStatus(`<span style="color:#ef5350;animation:pulse 1.5s infinite;display:inline-block">●</span> Live · ${liveData.length} bars · refresh in <span id="cd">${countdownVal}</span>s`,'#555');
+    document.getElementById('last-update').textContent='Updated: '+new Date().toLocaleTimeString('en-IN');
+  }else{
+    if(liveData.length===0){liveData=TEST_ACTUAL;setStatus('⚠️ All sources failed · test data','#f0b429');}
+    else setStatus(`⚠️ Refresh failed · ${liveData.length} bars`,'#f0b429');
+  }
+  buildAll();renderTable();draw();startCountdown();
+}
+
+function setStatus(html,col){
+  const el=document.getElementById('status');
+  el.innerHTML=html;el.style.color=col;
+}
+
+function startCountdown(){
+  clearInterval(countdownTimer);countdownVal=REFRESH_MS/1000;
+  countdownTimer=setInterval(()=>{
+    countdownVal--;const el=document.getElementById('cd');
+    if(el)el.textContent=countdownVal;
+    if(countdownVal<=0)clearInterval(countdownTimer);
+  },1000);
+}
+
+function setSource(src){
+  dataSource=src;
+  document.querySelectorAll('[id^="src-"]').forEach(b=>b.classList.remove('active'));
+  document.getElementById('src-'+src).classList.add('active');
+  clearInterval(refreshTimer);
+  fetchAndUpdate();
+  if(src==='live')refreshTimer=setInterval(fetchAndUpdate,REFRESH_MS);
+}
+
+// ============================================================
+// RESAMPLE
+// ============================================================
+function makeLabel(i,tf){
+  const mins=START_HOUR*60+START_MIN+i*tf;
+  const h=Math.floor(mins/60),m=mins%60;
+  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+}
+function resample(arr,tf){
+  const bars=[],total=Math.floor(arr.length/tf);
+  for(let i=0;i<total;i++){const g=arr.slice(i*tf,i*tf+tf);bars.push({label:makeLabel(i,tf),c:+g[g.length-1].toFixed(2)});}
+  const rem=arr.length%tf;
+  if(rem>0){const g=arr.slice(total*tf);bars.push({label:makeLabel(total,tf),c:+g[g.length-1].toFixed(2)});}
+  return bars;
+}
+function calcMA(arr,p){
+  return arr.map((_,i)=>{
+    if(i<p-1)return null;
+    return +(arr.slice(i-p+1,i+1).reduce((a,b)=>a+b.c,0)/p).toFixed(2);
+  });
+}
+function buildAll(){
+  lvData=resample(liveData,currentTF);
+  fcDataArr=FORECASTS.map(f=>resample(f.data,currentTF));
+  const max=Math.max(lvData.length,...fcDataArr.map(f=>f.length));
+  visCount=max;startIdx=0;
+  document.getElementById('bar-count').textContent=`LV:${lvData.length} · ${currentTF}m`;
+}
+
+// ============================================================
+// ALL CALCULATIONS
+// ============================================================
+function pearson(a,b){
+  const n=Math.min(a.length,b.length);if(n<2)return 0;
+  const ax=a.slice(0,n),bx=b.slice(0,n);
+  const ma=ax.reduce((s,v)=>s+v,0)/n,mb=bx.reduce((s,v)=>s+v,0)/n;
+  let num=0,da=0,db=0;
+  for(let i=0;i<n;i++){const A=ax[i]-ma,B=bx[i]-mb;num+=A*B;da+=A*A;db+=B*B;}
+  if(da===0||db===0)return 0;
+  return num/Math.sqrt(da*db);
+}
+function r2p(r){return Math.max(0,Math.min(100,Math.round(((r+1)/2)*100)));}
+function pct(v){return Math.round(v*100)+'%';}
+
+function analyse(live, fc) {
+  const n=Math.min(live.length,fc.length);
+  if(n<2) return null;
+  const lv=live.slice(0,n), fv=fc.slice(0,n);
+
+  // 1. Correlations
+  const corrFull = r2p(pearson(lv,fv));
+  const w60=Math.min(n,Math.floor(60/currentTF));
+  const corr60 = r2p(pearson(lv.slice(Math.max(0,n-w60)),fv.slice(Math.max(0,n-w60))));
+  const w30=Math.min(n,Math.floor(30/currentTF));
+  const corr30 = r2p(pearson(lv.slice(Math.max(0,n-w30)),fv.slice(Math.max(0,n-w30))));
+  const w15=Math.min(n,Math.floor(15/currentTF));
+  const corr15 = r2p(pearson(lv.slice(Math.max(0,n-w15)),fv.slice(Math.max(0,n-w15))));
+  const w5=Math.min(n,Math.floor(5/currentTF));
+  const corr5  = r2p(pearson(lv.slice(Math.max(0,n-w5)),fv.slice(Math.max(0,n-w5))));
+
+  // best 30-min window
+  let bestWinCorr=-2,bestWinLabel='--';
+  const ws=Math.floor(30/currentTF);
+  for(let i=0;i<=n-ws;i++){
+    const r=pearson(lv.slice(i,i+ws),fv.slice(i,i+ws));
+    if(r>bestWinCorr){bestWinCorr=r;bestWinLabel=makeLabel(i,currentTF);}
+  }
+
+  // worst 30-min window
+  let worstWinCorr=2,worstWinLabel='--';
+  for(let i=0;i<=n-ws;i++){
+    const r=pearson(lv.slice(i,i+ws),fv.slice(i,i+ws));
+    if(r<worstWinCorr){worstWinCorr=r;worstWinLabel=makeLabel(i,currentTF);}
+  }
+
+  // 2. Direction accuracy
+  let dirTotal=0,dirMatch=0,upTotal=0,upMatch=0,dnTotal=0,dnMatch=0;
+  let streak=0,maxStreak=0,curStreak=0;
+  for(let i=1;i<n;i++){
+    const ld=lv[i]-lv[i-1], fd=fv[i]-fv[i-1];
+    const same=(ld>=0&&fd>=0)||(ld<0&&fd<0);
+    dirTotal++;if(same){dirMatch++;curStreak++;maxStreak=Math.max(maxStreak,curStreak);}else curStreak=0;
+    if(ld>=0){upTotal++;if(same)upMatch++;}else{dnTotal++;if(same)dnMatch++;}
+  }
+  const dirAcc  = dirTotal?Math.round(dirMatch/dirTotal*100):0;
+  const upAcc   = upTotal?Math.round(upMatch/upTotal*100):0;
+  const dnAcc   = dnTotal?Math.round(dnMatch/dnTotal*100):0;
+
+  // current streak (from end)
+  curStreak=0;
+  for(let i=n-1;i>=1;i--){
+    const ld=lv[i]-lv[i-1],fd=fv[i]-fv[i-1];
+    if((ld>=0&&fd>=0)||(ld<0&&fd<0))curStreak++;else break;
+  }
+
+  // 3. Magnitude / error
+  const errors=lv.map((v,i)=>Math.abs(v-fv[i]));
+  const mae=+(errors.reduce((a,b)=>a+b,0)/n).toFixed(1);
+  const maxErr=+Math.max(...errors).toFixed(1);
+  const minErr=+Math.min(...errors).toFixed(1);
+  const within5  = Math.round(errors.filter(e=>e<=5).length/n*100);
+  const within10 = Math.round(errors.filter(e=>e<=10).length/n*100);
+  const within20 = Math.round(errors.filter(e=>e<=20).length/n*100);
+
+  // 4. Time shift
+  const maxS=Math.min(60,Math.floor(n/3));
+  let bestS=0,bestR=-2;
+  for(let s=-maxS;s<=maxS;s++){
+    let la,fb;
+    if(s>=0){la=lv.slice(s,n);fb=fv.slice(0,n-s);}
+    else{la=lv.slice(0,n+s);fb=fv.slice(-s,n);}
+    const r=pearson(la,fb);if(r>bestR){bestR=r;bestS=s;}
+  }
+  const shiftMins=bestS*currentTF;
+  const shiftLabel=shiftMins===0?'In sync':shiftMins>0?`+${shiftMins}m`:` ${shiftMins}m`;
+
+  // 5. Session match
+  const mornEnd=Math.min(n,Math.floor(165/currentTF)); // 9:15-12:00 = 165 mins
+  const corrMorn=mornEnd>1?r2p(pearson(lv.slice(0,mornEnd),fv.slice(0,mornEnd))):0;
+  const corrAftn=mornEnd<n?r2p(pearson(lv.slice(mornEnd),fv.slice(mornEnd))):0;
+
+  // 6. Trend / peak / trough
+  const lvHiIdx=lv.indexOf(Math.max(...lv));
+  const lvLoIdx=lv.indexOf(Math.min(...lv));
+  const fcHiIdx=fv.indexOf(Math.max(...fv));
+  const fcLoIdx=fv.indexOf(Math.min(...fv));
+  const peakDiff=Math.abs(lvHiIdx-fcHiIdx)*currentTF; // mins
+  const troughDiff=Math.abs(lvLoIdx-fcLoIdx)*currentTF;
+  const peakOk=peakDiff<=30;
+  const troughOk=troughDiff<=30;
+
+  const lvHi=Math.max(...lv), fcHi=Math.max(...fv);
+  const lvLo=Math.min(...lv), fcLo=Math.min(...fv);
+  const hiAcc=100-Math.min(100,Math.round(Math.abs(lvHi-fcHi)/Math.max(1,Math.abs(lvHi))*100));
+  const loAcc=100-Math.min(100,Math.round(Math.abs(lvLo-fcLo)/Math.max(1,Math.abs(lvLo))*100));
+  const eodDiff=Math.abs(lv[n-1]-fv[n-1]);
+  const eodAcc=100-Math.min(100,Math.round(eodDiff/Math.max(1,Math.abs(lv[n-1]))*100));
+
+  // trend direction
+  const lvTrend=lv[n-1]>=lv[0];
+  const fcTrend=fv[n-1]>=fv[0];
+  const trendMatch=lvTrend===fcTrend;
+
+  // composite score (weighted)
+  const score=Math.round(
+    corrFull*0.20 + corr30*0.15 + corr15*0.10 +
+    dirAcc*0.15 + within10*0.10 +
+    corrMorn*0.10 + corrAftn*0.10 +
+    hiAcc*0.05 + loAcc*0.05
+  );
+
+  return {
+    corrFull,corr60,corr30,corr15,corr5,
+    bestWinLabel,worstWinLabel,
+    dirAcc,upAcc,dnAcc,maxStreak,curStreak,
+    mae,maxErr,minErr,within5,within10,within20,
+    shiftMins,shiftLabel,corrMorn,corrAftn,
+    trendMatch,peakOk,troughOk,peakDiff,troughDiff,
+    hiAcc,loAcc,eodAcc,score
+  };
+}
+
+// ============================================================
+// RENDER TABLE
+// ============================================================
+function renderTable(){
+  const results=FORECASTS.map((f,i)=>({
+    ...f,
+    res: lvData.length<2?null:analyse(liveData.slice(0,Math.min(liveData.length,375)), f.data.slice(0,375))
+  }));
+
+  // find best per metric
+  function best(key,higher=true){
+    let b=higher?-Infinity:Infinity,bi=-1;
+    results.forEach((r,i)=>{if(r.res){const v=r.res[key];if(higher?v>b:v<b){b=v;bi=i;}}});
+    return bi;
+  }
+
+  // rank by score
+  const ranked=[...results].sort((a,b)=>(b.res?.score||0)-(a.res?.score||0));
+
+  // build header
+  const head=document.getElementById('tbl-head');
+  head.innerHTML='<tr><th>Metric</th>'+results.map(r=>`<th style="color:${r.color}">${r.name}</th>`).join('')+'</tr>';
+
+  const rows=[
+    // GROUP: CORRELATION
+    {label:'── CORRELATION ──',group:true},
+    {label:'Full day',key:'corrFull',unit:'%',higher:true},
+    {label:'Last 60 min',key:'corr60',unit:'%',higher:true},
+    {label:'Last 30 min',key:'corr30',unit:'%',higher:true},
+    {label:'Last 15 min',key:'corr15',unit:'%',higher:true},
+    {label:'Last 5 min', key:'corr5', unit:'%',higher:true},
+    {label:'Best window',key:'bestWinLabel',unit:'',higher:null},
+    {label:'Worst window',key:'worstWinLabel',unit:'',higher:null},
+    // GROUP: DIRECTION
+    {label:'── DIRECTION ──',group:true},
+    {label:'Overall accuracy',key:'dirAcc',unit:'%',higher:true},
+    {label:'Up move accuracy',key:'upAcc',unit:'%',higher:true},
+    {label:'Down move accuracy',key:'dnAcc',unit:'%',higher:true},
+    {label:'Best streak (bars)',key:'maxStreak',unit:'',higher:true},
+    {label:'Current streak',key:'curStreak',unit:'',higher:true},
+    // GROUP: MAGNITUDE
+    {label:'── MAGNITUDE ──',group:true},
+    {label:'Avg error (pts)',key:'mae',unit:'',higher:false},
+    {label:'Max error (pts)',key:'maxErr',unit:'',higher:false},
+    {label:'Within 5 pts',key:'within5',unit:'%',higher:true},
+    {label:'Within 10 pts',key:'within10',unit:'%',higher:true},
+    {label:'Within 20 pts',key:'within20',unit:'%',higher:true},
+    // GROUP: TIME
+    {label:'── TIME SHIFT ──',group:true},
+    {label:'Shift (mins)',key:'shiftLabel',unit:'',higher:null},
+    {label:'Morning match',key:'corrMorn',unit:'%',higher:true},
+    {label:'Afternoon match',key:'corrAftn',unit:'%',higher:true},
+    // GROUP: TREND
+    {label:'── TREND ──',group:true},
+    {label:'Day trend match',key:'trendMatch',unit:'',higher:null,bool:true},
+    {label:'Peak timing (±30m)',key:'peakOk',unit:'',higher:null,bool:true},
+    {label:'Trough timing (±30m)',key:'troughOk',unit:'',higher:null,bool:true},
+    {label:'High accuracy',key:'hiAcc',unit:'%',higher:true},
+    {label:'Low accuracy',key:'loAcc',unit:'%',higher:true},
+    {label:'End of day accuracy',key:'eodAcc',unit:'%',higher:true},
+    // GROUP: OVERALL
+    {label:'── OVERALL ──',group:true},
+    {label:'Composite score',key:'score',unit:'%',higher:true},
+    {label:'Rank',key:'rank',unit:'',higher:null,special:'rank'},
+  ];
+
+  const tbody=document.getElementById('tbl-body');
+  tbody.innerHTML='';
+
+  rows.forEach(row=>{
+    const tr=document.createElement('tr');
+    if(row.group){
+      tr.innerHTML=`<td colspan="${results.length+1}" style="color:#363a45;font-size:9px;letter-spacing:1px;padding:8px 8px 3px 8px;background:#0e1117">${row.label}</td>`;
+      tbody.appendChild(tr);return;
+    }
+
+    const bestIdx=row.higher!==null&&!row.bool&&row.special!=='rank'?best(row.key,row.higher):-1;
+    let cells=`<td>${row.label}</td>`;
+
+    results.forEach((r,i)=>{
+      if(!r.res){cells+=`<td style="color:#363a45">--</td>`;return;}
+
+      if(row.special==='rank'){
+        const rankPos=ranked.findIndex(x=>x.name===r.name)+1;
+        const medal=rankPos===1?'🥇':rankPos===2?'🥈':'🥉';
+        cells+=`<td class="${i===ranked.findIndex(x=>x.name===r.name)?'winner':''}">${medal}</td>`;
+        return;
+      }
+
+      const val=r.res[row.key];
+      let display=val;
+      let cls='';
+
+      if(row.bool){
+        display=val?'✅':'❌';
+      } else if(row.unit==='%'&&typeof val==='number'){
+        display=val+'%';
+        cls=val>=70?'good':val>=50?'mid':'bad';
+      } else if(typeof val==='number'){
+        cls=i===bestIdx?'best':'';
+      }
+
+      if(i===bestIdx&&!row.bool)cls='best';
+      const winnerClass=i===bestIdx?'winner':'';
+      cells+=`<td class="${winnerClass}"><span class="${cls}">${display}</span></td>`;
+    });
+
+    tr.innerHTML=cells;
+    tbody.appendChild(tr);
+  });
+
+  // build legend
+  const leg=document.getElementById('legend');
+  leg.innerHTML=`<div class="leg"><div class="leg-dot" style="background:#4fc3f7"></div><span>Live</span></div>`+
+    FORECASTS.map(f=>`<div class="leg"><div class="leg-dot" style="background:${f.color}"></div><span>${f.name}</span></div>`).join('');
+}
+
+// ============================================================
+// CANVAS
+// ============================================================
+const chartArea=document.getElementById('chart-area');
+const cv=document.getElementById('cv');
+const ctx=cv.getContext('2d');
+const tip=document.getElementById('tooltip');
+const PAD={L:10,R:76,T:16,B:28};
+
+function resize(){W=chartArea.clientWidth;H=chartArea.clientHeight;cv.width=W;cv.height=H;draw();}
+function pxY(v,lo,hi){return PAD.T+(1-(v-lo)/(hi-lo))*(H-PAD.T-PAD.B);}
+function pxX(i,cw){return PAD.L+i*cw+cw/2;}
+function fitAll(){startIdx=0;visCount=Math.max(lvData.length,...fcDataArr.map(f=>f.length));draw();}
+function zoom(dir){
+  const max=Math.max(lvData.length,...fcDataArr.map(f=>f.length));
+  const step=Math.max(5,Math.floor(visCount*0.15));
+  visCount=Math.max(10,Math.min(max,visCount+dir*step));
+  startIdx=Math.max(0,Math.min(max-visCount,startIdx));draw();
+}
+function setTF(tf,btn){
+  currentTF=tf;
+  document.querySelectorAll('.btn[onclick^="setTF"]').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  buildAll();renderTable();draw();
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#131722';ctx.fillRect(0,0,W,H);
+  const max=Math.max(lvData.length,...fcDataArr.map(f=>f.length));
+  if(!max)return;
+  if(visCount===0)visCount=max;
+  const cw=(W-PAD.L-PAD.R)/visCount;
+
+  const lvSl=lvData.slice(startIdx,startIdx+visCount);
+  const fcSls=fcDataArr.map(f=>f.slice(startIdx,startIdx+visCount));
+  const allV=[...lvSl.map(d=>d.c),...fcSls.flatMap(f=>f.map(d=>d.c))].filter(v=>v!==undefined);
+  if(!allV.length)return;
+  let lo=Math.min(...allV,0),hi=Math.max(...allV,0);
+  const pad=Math.max((hi-lo)*0.10,1);lo-=pad;hi+=pad;
+
+  // gridlines
+  const gc=Math.min(6,Math.floor(H/50));
+  for(let i=0;i<=gc;i++){
+    const y=PAD.T+i*(H-PAD.T-PAD.B)/gc,val=hi-i*(hi-lo)/gc;
+    ctx.strokeStyle='rgba(128,128,128,0.10)';ctx.lineWidth=0.5;
+    ctx.beginPath();ctx.moveTo(PAD.L,y);ctx.lineTo(W-PAD.R,y);ctx.stroke();
+    ctx.fillStyle='#555';ctx.font='10px monospace';ctx.textAlign='left';
+    ctx.fillText((val>=0?'+':'')+val.toFixed(1),W-PAD.R+4,y+4);
+  }
+
+  // zero line
+  const zy=pxY(0,lo,hi);
+  ctx.strokeStyle='rgba(200,200,200,0.25)';ctx.lineWidth=1;ctx.setLineDash([5,5]);
+  ctx.beginPath();ctx.moveTo(PAD.L,zy);ctx.lineTo(W-PAD.R,zy);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='#777';ctx.font='bold 10px monospace';ctx.textAlign='left';
+  ctx.fillText('0',W-PAD.R+4,zy+4);
+
+  function plotLine(sl,col,lw=1.5){
+    if(!sl||!sl.length)return;
+    ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.lineJoin='round';ctx.setLineDash([]);
+    ctx.beginPath();
+    sl.forEach((d,i)=>{const x=pxX(i,cw),y=pxY(d.c,lo,hi);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+    ctx.stroke();
+  }
+
+  // draw forecast lines first (thinner, behind)
+  fcSls.forEach((sl,i)=>plotLine(sl,FORECASTS[i].color,1.5));
+
+  // draw live on top (thicker, blue)
+  plotLine(lvSl,'#4fc3f7',2.5);
+
+  // crosshair
+  if(mouseX>=PAD.L&&mouseX<=W-PAD.R&&mouseY>=PAD.T&&mouseY<=H-PAD.B){
+    const i=Math.max(0,Math.min(visCount-1,Math.floor((mouseX-PAD.L)/cw)));
+    ctx.strokeStyle='rgba(200,200,200,0.20)';ctx.lineWidth=0.7;ctx.setLineDash([3,3]);
+    ctx.beginPath();ctx.moveTo(mouseX,PAD.T);ctx.lineTo(mouseX,H-PAD.B);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(PAD.L,mouseY);ctx.lineTo(W-PAD.R,mouseY);ctx.stroke();
+    ctx.setLineDash([]);
+
+    // snap dots
+    const lv=lvSl[i];
+    if(lv){ctx.beginPath();ctx.arc(pxX(i,cw),pxY(lv.c,lo,hi),4,0,Math.PI*2);ctx.fillStyle='#4fc3f7';ctx.fill();ctx.strokeStyle='#0e1117';ctx.lineWidth=1.5;ctx.stroke();}
+    fcSls.forEach((sl,fi)=>{
+      const d=sl[i];
+      if(d){ctx.beginPath();ctx.arc(pxX(i,cw),pxY(d.c,lo,hi),3,0,Math.PI*2);ctx.fillStyle=FORECASTS[fi].color;ctx.fill();}
+    });
+
+    // axis labels
+    const hv=hi-(mouseY-PAD.T)/(H-PAD.T-PAD.B)*(hi-lo);
+    ctx.fillStyle='#2a2d3a';ctx.strokeStyle='#444';ctx.lineWidth=0.5;
+    ctx.beginPath();ctx.rect(W-PAD.R+1,mouseY-9,PAD.R-3,18);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#d1d4dc';ctx.font='10px monospace';ctx.textAlign='left';
+    ctx.fillText((hv>=0?'+':'')+hv.toFixed(1),W-PAD.R+4,mouseY+4);
+
+    const lbl=(lv||fcSls[0][i])?.label||'';
+    if(lbl){
+      const lw2=ctx.measureText(lbl).width+10;
+      ctx.fillStyle='#2a2d3a';ctx.strokeStyle='#444';ctx.lineWidth=0.5;
+      ctx.beginPath();ctx.rect(pxX(i,cw)-lw2/2,H-PAD.B+2,lw2,16);ctx.fill();ctx.stroke();
+      ctx.fillStyle='#d1d4dc';ctx.font='10px monospace';ctx.textAlign='center';
+      ctx.fillText(lbl,pxX(i,cw),H-PAD.B+13);
+    }
+
+    // tooltip
+    const s=v=>(v>=0?'+':'')+v.toFixed(2);
+    let html=`<b style="color:#888">${lbl}</b>`;
+    if(lv)html+=`<br><span style="color:#4fc3f7">● Live: ${s(lv.c)}</span>`;
+    fcSls.forEach((sl,fi)=>{
+      const d=sl[i];
+      if(d)html+=`<br><span style="color:${FORECASTS[fi].color}">● ${FORECASTS[fi].name}: ${s(d.c)}</span>`;
+    });
+    tip.innerHTML=html;
+    tip.style.left=(mouseX+14+200>W?mouseX-220:mouseX+14)+'px';
+    tip.style.top=Math.max(0,mouseY-14)+'px';
+    tip.style.display='block';
+  }
+
+  // last price pins
+  [[lvSl,'#4fc3f7'],...fcSls.map((sl,i)=>[sl,FORECASTS[i].color])].forEach(([sl,col])=>{
+    if(!sl||!sl.length)return;
+    const last=sl[sl.length-1];
+    const ly=pxY(last.c,lo,hi);
+    ctx.fillStyle=col;ctx.beginPath();ctx.rect(W-PAD.R+1,ly-9,PAD.R-3,18);ctx.fill();
+    ctx.fillStyle='#000';ctx.font='bold 9px monospace';ctx.textAlign='left';
+    ctx.fillText((last.c>=0?'+':'')+last.c.toFixed(1),W-PAD.R+4,ly+4);
+  });
+
+  // x-axis
+  ctx.fillStyle='#555';ctx.font='10px monospace';ctx.textAlign='center';
+  const maxL=Math.floor((W-PAD.L-PAD.R)/55);
+  const step=Math.max(1,Math.floor(visCount/maxL));
+  const ref=lvData.length?lvData:fcDataArr[0];
+  ref.slice(startIdx,startIdx+visCount).forEach((d,i)=>{
+    if(i%step===0)ctx.fillText(d.label,pxX(i,cw),H-PAD.B+14);
+  });
+}
+
+// interactions
+cv.addEventListener('mousemove',e=>{
+  const r=cv.getBoundingClientRect();mouseX=e.clientX-r.left;mouseY=e.clientY-r.top;
+  if(isDragging){
+    const max=Math.max(lvData.length,...fcDataArr.map(f=>f.length));
+    const cw=(W-PAD.L-PAD.R)/visCount;
+    startIdx=Math.max(0,Math.min(max-visCount,dragStartIdx+Math.round(-(mouseX-dragStartX)/cw)));
+  }
+  draw();
+});
+cv.addEventListener('mouseleave',()=>{mouseX=-1;mouseY=-1;tip.style.display='none';draw();});
+cv.addEventListener('mousedown',e=>{isDragging=true;dragStartX=e.clientX-cv.getBoundingClientRect().left;dragStartIdx=startIdx;cv.style.cursor='grabbing';});
+cv.addEventListener('mouseup',()=>{isDragging=false;cv.style.cursor='crosshair';});
+cv.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const max=Math.max(lvData.length,...fcDataArr.map(f=>f.length));
+  const mx=e.clientX-cv.getBoundingClientRect().left;
+  const ratio=(mx-PAD.L)/(W-PAD.L-PAD.R),old=visCount;
+  const step=Math.max(5,Math.floor(visCount*0.12));
+  visCount=Math.max(10,Math.min(max,visCount+(e.deltaY>0?step:-step)));
+  startIdx=Math.max(0,Math.min(max-visCount,Math.round(startIdx+ratio*(old-visCount))));
+  draw();
+},{passive:false});
+let lTX=0,lPD=0;
+cv.addEventListener('touchstart',e=>{
+  if(e.touches.length===1){isDragging=true;lTX=e.touches[0].clientX;dragStartIdx=startIdx;}
+  if(e.touches.length===2)lPD=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+  e.preventDefault();
+},{passive:false});
+cv.addEventListener('touchmove',e=>{
+  const max=Math.max(lvData.length,...fcDataArr.map(f=>f.length));
+  if(e.touches.length===1&&isDragging){
+    const cw=(W-PAD.L-PAD.R)/visCount;
+    startIdx=Math.max(0,Math.min(max-visCount,dragStartIdx+Math.round(-(e.touches[0].clientX-lTX)/cw)));draw();
+  }
+  if(e.touches.length===2){
+    const dist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    visCount=Math.max(10,Math.min(max,Math.round(visCount*lPD/dist)));
+    startIdx=Math.max(0,Math.min(max-visCount,startIdx));lPD=dist;draw();
+  }
+  e.preventDefault();
+},{passive:false});
+cv.addEventListener('touchend',()=>{isDragging=false;});
+window.addEventListener('keydown',e=>{
+  const max=Math.max(lvData.length,...fcDataArr.map(f=>f.length));
+  const s=Math.max(1,Math.floor(visCount*0.1));
+  if(e.key==='ArrowLeft'){startIdx=Math.max(0,startIdx-s);draw();}
+  if(e.key==='ArrowRight'){startIdx=Math.min(max-visCount,startIdx+s);draw();}
+  if(e.key==='+'||e.key==='=')zoom(-1);
+  if(e.key==='-')zoom(1);
+  if(e.key==='f'||e.key==='F')fitAll();
+});
+window.addEventListener('resize',resize);
+
+// INIT
+buildAll();
+renderTable();
+resize();
+setSource('test');
+</script>
+</body>
+</html>
