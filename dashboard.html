@@ -51,6 +51,66 @@
 </head>
 <body>
 
+<style>
+  .broker-bar {
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #131722;
+    border-top: 1px solid #1e222d;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .broker-label {
+    font-size: 10px;
+    color: #555;
+    font-family: monospace;
+  }
+  .buy-btn {
+    padding: 5px 16px;
+    background: #26a69a22;
+    color: #26a69a;
+    border: 1px solid #26a69a66;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .sell-btn {
+    padding: 5px 16px;
+    background: #ef535022;
+    color: #ef5350;
+    border: 1px solid #ef535066;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .broker-btn {
+    padding: 4px 12px;
+    background: #2a2d3a;
+    color: #888;
+    border: 1px solid #363a45;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 10px;
+  }
+  .broker-btn.active {
+    color: #26a69a;
+    border-color: #26a69a66;
+  }
+  .disclaimer {
+    font-size: 9px;
+    color: #363a45;
+    font-family: monospace;
+  }
+</style>
+</head>
+
+
 <div id="topbar">
   <h1>📈 NSE Nifty 50 spot — Multi-Forecast Analyser- 10 July 2026 India</h1>
   <span id="status">Loading...</span>
@@ -1813,5 +1873,108 @@ renderTable();
 resize();
 setSource('test');
 </script>
+<!-- BROKER BAR AT BOTTOM -->
+<div class="broker-bar">
+
+  <span class="broker-label">Trade on:</span>
+
+  <!-- Indian Brokers -->
+  <button class="broker-btn active"
+    onclick="setBroker('angel')">
+    Angel One
+  </button>
+  <button class="broker-btn"
+    onclick="setBroker('zerodha')">
+    Zerodha
+  </button>
+  <button class="broker-btn"
+    onclick="setBroker('upstox')">
+    Upstox
+  </button>
+  <button class="broker-btn"
+    onclick="setBroker('fyers')">
+    Fyers
+  </button>
+  <button class="broker-btn"
+    onclick="setBroker('dhan')">
+    Dhan
+  </button>
+
+  <div style="width:1px;height:20px;background:#363a45;margin:0 4px;"></div>
+
+  <!-- BUY SELL BUTTONS -->
+  <button class="buy-btn"
+    onclick="placeOrder('BUY')">
+    ▲ BUY
+  </button>
+  <button class="sell-btn"
+    onclick="placeOrder('SELL')">
+    ▼ SELL
+  </button>
+
+  <span class="disclaimer">
+    Not investment advice.
+    Educational only.
+  </span>
+
+</div>
+
+<script>
+// ============================================================
+// BROKER URLS — opens broker with Nifty pre-selected
+// ============================================================
+const BROKER_URLS = {
+  angel: {
+    name: 'Angel One',
+    buy:  'https://trade.angelone.in/',
+    sell: 'https://trade.angelone.in/',
+  },
+  zerodha: {
+    name: 'Zerodha Kite',
+    buy:  'https://kite.zerodha.com/',
+    sell: 'https://kite.zerodha.com/',
+  },
+  upstox: {
+    name: 'Upstox',
+    buy:  'https://trade.upstox.com/',
+    sell: 'https://trade.upstox.com/',
+  },
+  fyers: {
+    name: 'Fyers',
+    buy:  'https://trade.fyers.in/',
+    sell: 'https://trade.fyers.in/',
+  },
+  dhan: {
+    name: 'Dhan',
+    buy:  'https://web.dhan.co/',
+    sell: 'https://web.dhan.co/',
+  },
+};
+
+let currentBroker = 'angel';
+
+function setBroker(broker) {
+  currentBroker = broker;
+  // update active button
+  document.querySelectorAll('.broker-btn')
+    .forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+function placeOrder(side) {
+  const broker = BROKER_URLS[currentBroker];
+  const url    = side === 'BUY' 
+               ? broker.buy 
+               : broker.sell;
+
+  // open broker in new tab
+  window.open(url, '_blank');
+
+  // log for your records
+  console.log(`${side} order → ${broker.name}`);
+}
+</script>
+</body>
+</html>
 </body>
 </html>
