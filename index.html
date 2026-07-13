@@ -154,7 +154,7 @@
       <div class="plan-btn" onclick="document.getElementById('em').focus()">Get Premium</div>
     </div>
   </div>
-  <div style="text-align:center;margin-top:14px;font-size:10px;color:#363a45;">Pay via UPI · Month to month · Cancel anytime · your@email.com</div>
+  <div style="text-align:center;margin-top:14px;font-size:10px;color:#363a45;">Pay via UPI · Month to month · Cancel anytime · craydevc@gmail.com</div>
 </div>
 
 <footer>Educational forecast tool only. Not investment advice. Past accuracy does not guarantee future results. Not SEBI registered.<br><br>© 2026 Nifty Forecast</footer>
@@ -171,11 +171,11 @@ const FB = {
     storageBucket: "huntorfarm.appspot.com",
     messagingSenderId: "568472349794",
     appId: "1:568472349794:web:d753d6976166b968ce753b"
-  };
+};
 
 // ── SUBSCRIBERS — add email when paid, remove when cancelled ──
 const SUBS = [
-  'craydevc@email.com',
+  'craydevc@gmail.com',
   // 'subscriber1@gmail.com',
 ];
 
@@ -211,7 +211,7 @@ window.doLogout = async () => {
   document.getElementById('user-bar').style.display='none';
 };
 
-window.requestAccess = () => alert('Contact your@email.com\nUPI payment details will be shared.\n₹999/month Basic · ₹2499/month Premium');
+window.requestAccess = () => alert('Contact craydevc@gmail.com\nUPI payment details will be shared.\n₹999/month Basic · ₹2499/month Premium');
 
 function errMsg(c){
   return {'auth/user-not-found':'Email not registered. Contact us.','auth/wrong-password':'Wrong password.','auth/invalid-credential':'Wrong email or password.','auth/too-many-requests':'Too many attempts. Try later.'}[c]||'Login failed. Try again.';

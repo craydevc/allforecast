@@ -3,73 +3,123 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nifty 50 — Live vs Forecast</title>
+<title>Nifty 50 — Multi-Forecast Dashboard</title>
 <style>
   * { box-sizing:border-box; margin:0; padding:0; }
-  body { background:#0e1117; color:#d1d4dc; font-family:monospace; padding:8px; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+  body { background:#0e1117; color:#d1d4dc; font-family:monospace; padding:8px; min-height:100vh; display:flex; flex-direction:column; }
+
+  /* ── TOPBAR ── */
   #topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; flex-wrap:wrap; gap:5px; flex-shrink:0; }
   #topbar h1 { font-size:13px; color:#fff; font-weight:700; }
   #status { font-size:10px; color:#555; }
   #userbar { display:flex; align-items:center; gap:8px; font-size:10px; color:#555; }
   #userbar span { color:#26a69a; }
   .out-btn { padding:3px 10px; background:#2a2d3a; color:#555; border:1px solid #363a45; border-radius:3px; cursor:pointer; font-family:monospace; font-size:10px; }
+  .out-btn:hover { color:#ef5350; border-color:#ef535044; }
+
+  /* ── TOOLBAR ── */
   #toolbar { display:flex; align-items:center; gap:4px; flex-wrap:wrap; flex-shrink:0; margin-bottom:5px; }
   .btn { font-size:10px; padding:3px 8px; border-radius:3px; cursor:pointer; border:1px solid #363a45; background:#2a2d3a; color:#888; font-family:monospace; }
   .btn.active { background:#26a69a22; color:#26a69a; border-color:#26a69a66; }
   .btn:hover { color:#d1d4dc; border-color:#555; }
   .sep { width:1px; height:14px; background:#363a45; margin:0 2px; }
-  .pre-inp { width:110px; padding:3px 6px; background:#131722; border:1px solid #363a45; border-radius:3px; color:#26a69a; font-family:monospace; font-size:10px; outline:none; }
-  #chart-area { position:relative; flex:1; min-height:0; }
+  .pre-inp { width:115px; padding:3px 6px; background:#131722; border:1px solid #363a45; border-radius:3px; color:#26a69a; font-family:monospace; font-size:10px; outline:none; }
+  .pre-inp:focus { border-color:#26a69a66; }
+
+  /* ── CHART ── */
+  #chart-area { position:relative; height:340px; flex-shrink:0; margin-bottom:6px; }
   canvas { display:block; cursor:crosshair; }
   #tooltip { position:absolute; pointer-events:none; background:rgba(19,23,34,0.96); border:1px solid #363a45; border-radius:5px; padding:6px 10px; font-size:11px; line-height:1.8; display:none; white-space:nowrap; z-index:10; }
-  #sim-panel { flex-shrink:0; margin-top:5px; background:#131722; border-radius:7px; border:1px solid #1e222d; padding:6px 10px; display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+
+  /* ── SIM PANEL ── */
+  #sim-panel { flex-shrink:0; margin-bottom:6px; background:#131722; border-radius:7px; border:1px solid #1e222d; padding:6px 10px; display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
   .sim-box { display:flex; flex-direction:column; gap:2px; }
   .sim-label { font-size:9px; color:#555; text-transform:uppercase; letter-spacing:0.5px; }
   .sim-val { font-size:16px; font-weight:700; }
   .sim-bar-bg { height:3px; background:#1e222d; border-radius:2px; overflow:hidden; }
   .sim-bar-fill { height:100%; border-radius:2px; transition:width 0.6s,background 0.6s; }
   .sim-sub { font-size:9px; color:#555; }
-  #footer { display:flex; justify-content:space-between; font-size:10px; color:#555; margin-top:4px; flex-wrap:wrap; gap:3px; flex-shrink:0; }
-  #legend { display:flex; gap:10px; }
+
+  /* ── COMPARISON TABLE ── */
+  #analysis { flex:1; overflow-y:auto; background:#131722; border-radius:8px; border:1px solid #1e222d; padding:8px; }
+  .tbl-title { font-size:9px; color:#555; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+  table { width:100%; border-collapse:collapse; font-size:11px; }
+  th { background:#0e1117; color:#555; font-size:9px; text-transform:uppercase; letter-spacing:0.5px; padding:5px 8px; text-align:center; border-bottom:1px solid #1e222d; position:sticky; top:0; z-index:5; }
+  th:first-child { text-align:left; }
+  td { padding:4px 8px; border-bottom:1px solid #0e111766; text-align:center; }
+  td:first-child { text-align:left; color:#555; font-size:10px; }
+  tr:hover td { background:#131722cc; }
+  .winner { background:#26a69a0a !important; }
+  .best { font-weight:700; }
+  .g { color:#26a69a; }
+  .y { color:#f0b429; }
+  .r { color:#ef5350; }
+  .grp td { color:#363a45; font-size:9px; letter-spacing:1px; padding:7px 8px 3px; background:#0e1117; }
+
+  /* ── FOOTER ── */
+  #footer { display:flex; justify-content:space-between; font-size:10px; color:#555; margin-top:5px; flex-wrap:wrap; gap:3px; flex-shrink:0; }
+  #legend { display:flex; gap:10px; flex-wrap:wrap; }
   .leg { display:flex; align-items:center; gap:4px; }
   .leg-line { width:16px; height:2px; border-radius:1px; }
   #hover-info { font-size:10px; }
-  /* ACCESS DENIED */
-  #access-denied { display:none; flex-direction:column; align-items:center; justify-content:center; height:100vh; gap:14px; text-align:center; padding:20px; }
+
+  /* ── ACCESS DENIED ── */
+  #access-denied { display:none; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; gap:14px; text-align:center; padding:20px; }
   #access-denied h2 { font-size:16px; color:#fff; }
   #access-denied p { font-size:11px; color:#555; max-width:300px; line-height:1.7; }
   .upi-box { background:#131722; border:1px solid #1e222d; border-radius:8px; padding:18px 24px; display:flex; flex-direction:column; gap:10px; max-width:280px; width:100%; }
   .upi-val { font-size:13px; color:#26a69a; font-weight:700; text-align:center; padding:8px; background:#26a69a11; border:1px solid #26a69a33; border-radius:5px; }
   .wa-btn { padding:8px; background:#25d36622; color:#25d366; border:1px solid #25d36644; border-radius:5px; text-align:center; text-decoration:none; font-size:11px; }
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-  @media(max-width:600px){ #sim-panel{grid-template-columns:repeat(2,1fr);} }
+  .em-btn { padding:8px; background:#2a2d3a; color:#888; border:1px solid #363a45; border-radius:5px; text-align:center; text-decoration:none; font-size:11px; }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  @media(max-width:600px) { #sim-panel{grid-template-columns:repeat(2,1fr);} #chart-area{height:260px;} }
 </style>
 </head>
 <body>
 
-<!-- ACCESS DENIED (shown to non-subscribers) -->
+<!-- ACCESS DENIED -->
 <div id="access-denied">
-  <div style="font-size:36px">🔒</div>
+  <div style="font-size:40px">🔒</div>
   <h2>Subscription Required</h2>
-  <p>You are logged in as<br><span id="denied-email" style="color:#26a69a"></span><br><br>but your subscription is not active.</p>
+  <p>You are logged in as<br>
+    <span id="denied-email" style="color:#26a69a"></span><br><br>
+    but your subscription is not active yet.
+  </p>
   <div class="upi-box">
-    <div style="font-size:11px;color:#555;">To activate:</div>
-    <div style="font-size:11px;color:#d1d4dc;line-height:1.8;">1. Pay via UPI below<br>2. Send screenshot on WhatsApp<br>3. Access within 1 hour ✅</div>
-    <div class="upi-val">UPI: yourname@upi</div>
-    <div style="font-size:11px;color:#555;text-align:center;">₹999/month Basic · ₹2,499/month Premium</div>
-    <a href="https://wa.me/7387386453" target="_blank" class="wa-btn">💬 WhatsApp to Confirm Payment</a>
+    <div style="font-size:11px;color:#555;">To activate your account:</div>
+    <div style="font-size:11px;color:#d1d4dc;line-height:1.9;">
+      1. Choose your plan below<br>
+      2. Pay via UPI<br>
+      3. Send screenshot on WhatsApp<br>
+      4. Access activated within 1 hour ✅
+    </div>
+    <div style="font-size:11px;color:#555;text-align:center;">
+      Basic ₹999/mo · Premium ₹2,499/mo
+    </div>
+    <div class="upi-val">UPI: craydevc@okicici</div>
+    <a href="https://wa.me/917387386453?text=Hi%2C+I+want+to+subscribe+to+Nifty+Forecast.+Please+share+payment+details."
+       target="_blank" class="wa-btn">
+      💬 WhatsApp to Subscribe
+    </a>
+    <a href="mailto:craydevc@gmail.com?subject=Nifty Forecast Subscription&body=Hi, I want to subscribe. Please share payment details."
+       class="em-btn">
+      📧 Email Us
+    </a>
   </div>
-  <button class="out-btn" onclick="doLogout()" style="margin-top:8px;">← Logout</button>
+  <button class="out-btn" onclick="doLogout()" style="margin-top:8px;">
+    ← Back to Login
+  </button>
 </div>
 
-<!-- MAIN DASHBOARD (shown to subscribers only) -->
-<div id="main" style="display:none;flex-direction:column;height:100%;gap:0;">
+<!-- MAIN DASHBOARD -->
+<div id="main" style="display:none;flex-direction:column;flex:1;">
 
 <div id="topbar">
   <h1>📈 Nifty 50 — Live vs Forecast</h1>
   <span id="status">Loading...</span>
   <div id="userbar">
-    Logged in: <span id="u-email"></span>
+    <span id="u-email"></span>
     <button class="out-btn" onclick="doLogout()">Logout</button>
   </div>
 </div>
@@ -89,7 +139,9 @@
   <button class="btn" onclick="zoom(1)">－</button>
   <button class="btn" onclick="fitAll()">Fit</button>
   <div class="sep"></div>
-  <input class="pre-inp" type="number" id="pre-open" placeholder="Pre-open 9:07" oninput="setPreOpen(this.value)">
+  <input class="pre-inp" type="number" id="pre-open"
+    placeholder="Pre-open 9:07"
+    oninput="setPreOpen(this.value)">
   <div class="sep"></div>
   <button class="btn active" id="src-live" onclick="setSource('live')">🔴 Live</button>
   <button class="btn" id="src-test" onclick="setSource('test')">📋 Test</button>
@@ -131,12 +183,17 @@
   </div>
 </div>
 
+<div id="analysis">
+  <div class="tbl-title">📊 Model Comparison — All Metrics</div>
+  <table>
+    <thead id="tbl-head"></thead>
+    <tbody id="tbl-body"></tbody>
+  </table>
+</div>
+
 <div id="footer">
   <div id="legend">
-    <div class="leg"><div class="leg-line" style="background:#fff"></div><span>Live</span></div>
-    <div class="leg"><div class="leg-line" style="background:#26a69a"></div><span>Forecast</span></div>
-    <div class="leg"><div class="leg-line" style="background:#f0b429"></div><span>MA20</span></div>
-    <div class="leg"><div class="leg-line" style="background:#e040fb"></div><span>MA50</span></div>
+    <div class="leg"><div class="leg-line" style="background:#fff"></div><span>Live (Actual)</span></div>
   </div>
   <span id="bar-count"></span>
   <span id="last-update"></span>
@@ -145,14 +202,16 @@
 </div><!-- end #main -->
 
 <script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { initializeApp }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, onAuthStateChanged, signOut }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 // ============================================================
-// FIREBASE CONFIG — paste yours here
+// FIREBASE CONFIG
 // ============================================================
 const FB = {
-  apiKey: "AIzaSyA22RcIFt5vPfhSUoKMFl1ja6MCXKxv06k",
+    apiKey: "AIzaSyA22RcIFt5vPfhSUoKMFl1ja6MCXKxv06k",
     authDomain: "huntorfarm.firebaseapp.com",
     projectId: "huntorfarm",
     storageBucket: "huntorfarm.appspot.com",
@@ -161,10 +220,11 @@ const FB = {
 };
 
 // ============================================================
-// SUBSCRIBERS — add email when paid, remove when cancelled
+// SUBSCRIBERS
+// Add email when paid — remove when cancelled
 // ============================================================
 const SUBS = [
-  'craydevc@email.com',
+  'craydevc@gmail.com',
   // 'subscriber1@gmail.com',
   // 'subscriber2@gmail.com',
 ];
@@ -172,37 +232,168 @@ const SUBS = [
 const app  = initializeApp(FB);
 const auth = getAuth(app);
 
-// ── AUTH CHECK ──
 onAuthStateChanged(auth, user => {
-  if (!user) {
-    window.location.href = 'index.html';
-    return;
-  }
-
+  if (!user) { window.location.href='index.html'; return; }
   const isSub = SUBS.includes(user.email.toLowerCase());
-
   if (!isSub) {
-    // show access denied
-    document.getElementById('access-denied').style.display = 'flex';
-    document.getElementById('denied-email').textContent    = user.email;
+    document.getElementById('access-denied').style.display='flex';
+    document.getElementById('denied-email').textContent=user.email;
     return;
   }
-
-  // subscriber — show dashboard
-  document.getElementById('main').style.display = 'flex';
-  document.getElementById('u-email').textContent = user.email;
+  document.getElementById('main').style.display='flex';
+  document.getElementById('u-email').textContent=user.email;
   initDashboard();
 });
 
 window.doLogout = async () => {
   await signOut(auth);
-  window.location.href = 'index.html';
+  window.location.href='index.html';
 };
 
 // ============================================================
-// YOUR FORECAST DATA — paste your 375 numbers here
+// YOUR FORECASTS
+// Add/remove models here — each needs 375 numbers
 // ============================================================
-const FORECAST = [
+const FORECASTS = [
+  {
+    name:  'Model A',
+    color: '#26a69a',
+    data:  [
+      0,-24.25,-23.90,-6.10,-7.60,-1.85,8.10,5.60,4.20,19.65,
+      29.30,23.30,20.05,9.30,9.70,10.05,-6.50,-3.80,-0.90,5.35,
+      2.95,-2.55,9.95,4.35,8.05,-4.05,-5.00,2.15,6.30,4.20,
+      15.45,21.00,24.05,21.85,28.00,32.20,37.00,45.95,41.95,34.85,
+      36.00,41.70,43.65,38.40,39.20,33.50,32.75,33.55,31.45,39.90,
+      34.35,30.65,25.35,27.30,29.10,30.85,26.65,25.15,35.65,47.05,
+      50.40,42.10,37.20,37.90,41.45,37.10,39.10,37.65,32.25,31.40,
+      37.15,40.25,32.60,31.90,34.65,37.00,39.10,38.70,35.65,35.15,
+      36.25,39.75,42.30,36.50,32.00,31.05,37.70,46.25,40.50,45.35,
+      51.70,54.90,54.20,55.90,61.75,55.15,51.55,48.60,47.20,43.35,
+      47.20,50.90,52.05,52.60,60.15,50.40,45.50,48.30,46.40,43.20,
+      39.50,43.15,44.70,46.90,52.50,48.65,54.40,54.45,58.60,58.45,
+      60.60,65.15,61.25,58.10,58.70,59.60,61.05,59.60,55.40,55.00,
+      52.90,56.05,54.50,52.75,53.10,45.00,47.00,48.20,48.40,53.35,
+      52.95,47.85,48.05,55.35,57.70,56.75,55.45,58.85,58.95,58.15,
+      57.35,60.70,65.80,63.25,66.75,71.20,63.30,66.40,71.00,70.95,
+      72.95,77.35,93.45,98.30,99.10,108.60,105.40,102.70,104.80,109.75,
+      109.45,109.70,111.30,111.85,112.05,114.20,118.05,116.70,111.80,106.05,
+      112.25,109.15,105.15,106.70,106.45,105.40,103.30,98.10,87.50,88.60,
+      83.50,82.50,76.65,70.30,64.45,71.25,50.00,48.65,52.60,52.40,
+      59.80,65.35,62.60,66.05,69.85,65.15,61.75,60.70,60.45,55.40,
+      49.10,52.55,51.05,54.75,55.95,54.80,55.65,56.85,59.60,61.45,
+      59.90,56.65,58.70,54.15,59.40,54.65,58.20,66.55,71.30,65.60,
+      64.70,63.45,58.45,55.60,58.30,60.85,55.85,50.30,45.45,35.35,
+      37.60,39.55,43.45,48.70,59.35,57.95,53.25,54.05,55.95,51.60,
+      46.90,46.25,40.20,45.60,44.05,40.45,43.85,47.25,52.00,54.50,
+      56.50,54.55,55.75,54.30,62.45,69.90,71.75,68.60,65.35,62.90,
+      62.65,61.00,69.60,67.95,65.05,62.80,62.25,65.90,58.15,52.90,
+      49.10,49.65,39.00,47.85,40.95,39.25,41.40,40.35,47.80,45.85,
+      42.95,44.55,41.20,41.95,34.45,23.80,27.95,17.65,1.75,1.70,
+      -21.35,-18.50,-5.25,-16.90,-17.70,-18.65,-18.65,-15.20,-39.25,-26.95,
+      -39.15,-38.05,-36.05,-40.50,-29.25,-20.55,-28.50,-30.15,-33.30,-31.55,
+      -12.40,-23.60,-25.75,-32.00,-36.30,-30.70,-36.50,-54.85,-67.15,-66.40,
+      -54.65,-53.55,-48.30,-49.00,-65.60,-57.35,-53.75,-45.95,-23.75,-34.40,
+      -34.10,-37.15,-41.70,-41.05,-47.05,-75.60,-76.90,-81.15,-83.65,-76.55,
+      -74.25,-65.75,-68.75,-67.90,-77.75,-68.05,-81.70,-79.75,-76.00,-81.45,
+      -89.60,-72.10,-84.05,-84.20,-79.15,-88.70,-96.90,-96.75,-92.55,-91.20,
+      -95.10,-93.15,-84.95,-89.05,-84.50
+    ]
+  },
+  {
+    name:  'Model B',
+    color: '#f0b429',
+    // PASTE YOUR MODEL B DATA HERE
+    // for now using shifted version of A as demo
+    data: [
+      0,-24.25,-23.90,-6.10,-7.60,-1.85,8.10,5.60,4.20,19.65,
+      29.30,23.30,20.05,9.30,9.70,10.05,-6.50,-3.80,-0.90,5.35,
+      2.95,-2.55,9.95,4.35,8.05,-4.05,-5.00,2.15,6.30,4.20,
+      15.45,21.00,24.05,21.85,28.00,32.20,37.00,45.95,41.95,34.85,
+      36.00,41.70,43.65,38.40,39.20,33.50,32.75,33.55,31.45,39.90,
+      34.35,30.65,25.35,27.30,29.10,30.85,26.65,25.15,35.65,47.05,
+      50.40,42.10,37.20,37.90,41.45,37.10,39.10,37.65,32.25,31.40,
+      37.15,40.25,32.60,31.90,34.65,37.00,39.10,38.70,35.65,35.15,
+      36.25,39.75,42.30,36.50,32.00,31.05,37.70,46.25,40.50,45.35,
+      51.70,54.90,54.20,55.90,61.75,55.15,51.55,48.60,47.20,43.35,
+      47.20,50.90,52.05,52.60,60.15,50.40,45.50,48.30,46.40,43.20,
+      39.50,43.15,44.70,46.90,52.50,48.65,54.40,54.45,58.60,58.45,
+      60.60,65.15,61.25,58.10,58.70,59.60,61.05,59.60,55.40,55.00,
+      52.90,56.05,54.50,52.75,53.10,45.00,47.00,48.20,48.40,53.35,
+      52.95,47.85,48.05,55.35,57.70,56.75,55.45,58.85,58.95,58.15,
+      57.35,60.70,65.80,63.25,66.75,71.20,63.30,66.40,71.00,70.95,
+      72.95,77.35,93.45,98.30,99.10,108.60,105.40,102.70,104.80,109.75,
+      109.45,109.70,111.30,111.85,112.05,114.20,118.05,116.70,111.80,106.05,
+      112.25,109.15,105.15,106.70,106.45,105.40,103.30,98.10,87.50,88.60,
+      83.50,82.50,76.65,70.30,64.45,71.25,50.00,48.65,52.60,52.40,
+      59.80,65.35,62.60,66.05,69.85,65.15,61.75,60.70,60.45,55.40,
+      49.10,52.55,51.05,54.75,55.95,54.80,55.65,56.85,59.60,61.45,
+      59.90,56.65,58.70,54.15,59.40,54.65,58.20,66.55,71.30,65.60,
+      64.70,63.45,58.45,55.60,58.30,60.85,55.85,50.30,45.45,35.35,
+      37.60,39.55,43.45,48.70,59.35,57.95,53.25,54.05,55.95,51.60,
+      46.90,46.25,40.20,45.60,44.05,40.45,43.85,47.25,52.00,54.50,
+      56.50,54.55,55.75,54.30,62.45,69.90,71.75,68.60,65.35,62.90,
+      62.65,61.00,69.60,67.95,65.05,62.80,62.25,65.90,58.15,52.90,
+      49.10,49.65,39.00,47.85,40.95,39.25,41.40,40.35,47.80,45.85,
+      42.95,44.55,41.20,41.95,34.45,23.80,27.95,17.65,1.75,1.70,
+      -21.35,-18.50,-5.25,-16.90,-17.70,-18.65,-18.65,-15.20,-39.25,-26.95,
+      -39.15,-38.05,-36.05,-40.50,-29.25,-20.55,-28.50,-30.15,-33.30,-31.55,
+      -12.40,-23.60,-25.75,-32.00,-36.30,-30.70,-36.50,-54.85,-67.15,-66.40,
+      -54.65,-53.55,-48.30,-49.00,-65.60,-57.35,-53.75,-45.95,-23.75,-34.40,
+      -34.10,-37.15,-41.70,-41.05,-47.05,-75.60,-76.90,-81.15,-83.65,-76.55,
+      -74.25,-65.75,-68.75,-67.90,-77.75,-68.05,-81.70,-79.75,-76.00,-81.45,
+      -89.60,-72.10,-84.05,-84.20,-79.15,-88.70,-96.90,-96.75,-92.55,-91.20,
+      -95.10,-93.15,-84.95,-89.05,-84.50
+    ].map((v,i)=>+(v*(1+Math.sin(i/40)*0.12)).toFixed(2))
+  },
+  {
+    name:  'Model C',
+    color: '#e040fb',
+    // PASTE YOUR MODEL C DATA HERE
+    data: [
+      0,-24.25,-23.90,-6.10,-7.60,-1.85,8.10,5.60,4.20,19.65,
+      29.30,23.30,20.05,9.30,9.70,10.05,-6.50,-3.80,-0.90,5.35,
+      2.95,-2.55,9.95,4.35,8.05,-4.05,-5.00,2.15,6.30,4.20,
+      15.45,21.00,24.05,21.85,28.00,32.20,37.00,45.95,41.95,34.85,
+      36.00,41.70,43.65,38.40,39.20,33.50,32.75,33.55,31.45,39.90,
+      34.35,30.65,25.35,27.30,29.10,30.85,26.65,25.15,35.65,47.05,
+      50.40,42.10,37.20,37.90,41.45,37.10,39.10,37.65,32.25,31.40,
+      37.15,40.25,32.60,31.90,34.65,37.00,39.10,38.70,35.65,35.15,
+      36.25,39.75,42.30,36.50,32.00,31.05,37.70,46.25,40.50,45.35,
+      51.70,54.90,54.20,55.90,61.75,55.15,51.55,48.60,47.20,43.35,
+      47.20,50.90,52.05,52.60,60.15,50.40,45.50,48.30,46.40,43.20,
+      39.50,43.15,44.70,46.90,52.50,48.65,54.40,54.45,58.60,58.45,
+      60.60,65.15,61.25,58.10,58.70,59.60,61.05,59.60,55.40,55.00,
+      52.90,56.05,54.50,52.75,53.10,45.00,47.00,48.20,48.40,53.35,
+      52.95,47.85,48.05,55.35,57.70,56.75,55.45,58.85,58.95,58.15,
+      57.35,60.70,65.80,63.25,66.75,71.20,63.30,66.40,71.00,70.95,
+      72.95,77.35,93.45,98.30,99.10,108.60,105.40,102.70,104.80,109.75,
+      109.45,109.70,111.30,111.85,112.05,114.20,118.05,116.70,111.80,106.05,
+      112.25,109.15,105.15,106.70,106.45,105.40,103.30,98.10,87.50,88.60,
+      83.50,82.50,76.65,70.30,64.45,71.25,50.00,48.65,52.60,52.40,
+      59.80,65.35,62.60,66.05,69.85,65.15,61.75,60.70,60.45,55.40,
+      49.10,52.55,51.05,54.75,55.95,54.80,55.65,56.85,59.60,61.45,
+      59.90,56.65,58.70,54.15,59.40,54.65,58.20,66.55,71.30,65.60,
+      64.70,63.45,58.45,55.60,58.30,60.85,55.85,50.30,45.45,35.35,
+      37.60,39.55,43.45,48.70,59.35,57.95,53.25,54.05,55.95,51.60,
+      46.90,46.25,40.20,45.60,44.05,40.45,43.85,47.25,52.00,54.50,
+      56.50,54.55,55.75,54.30,62.45,69.90,71.75,68.60,65.35,62.90,
+      62.65,61.00,69.60,67.95,65.05,62.80,62.25,65.90,58.15,52.90,
+      49.10,49.65,39.00,47.85,40.95,39.25,41.40,40.35,47.80,45.85,
+      42.95,44.55,41.20,41.95,34.45,23.80,27.95,17.65,1.75,1.70,
+      -21.35,-18.50,-5.25,-16.90,-17.70,-18.65,-18.65,-15.20,-39.25,-26.95,
+      -39.15,-38.05,-36.05,-40.50,-29.25,-20.55,-28.50,-30.15,-33.30,-31.55,
+      -12.40,-23.60,-25.75,-32.00,-36.30,-30.70,-36.50,-54.85,-67.15,-66.40,
+      -54.65,-53.55,-48.30,-49.00,-65.60,-57.35,-53.75,-45.95,-23.75,-34.40,
+      -34.10,-37.15,-41.70,-41.05,-47.05,-75.60,-76.90,-81.15,-83.65,-76.55,
+      -74.25,-65.75,-68.75,-67.90,-77.75,-68.05,-81.70,-79.75,-76.00,-81.45,
+      -89.60,-72.10,-84.05,-84.20,-79.15,-88.70,-96.90,-96.75,-92.55,-91.20,
+      -95.10,-93.15,-84.95,-89.05,-84.50
+    ].map((v,i)=>+(v*(0.9+Math.cos(i/30)*0.1)).toFixed(2))
+  }
+];
+
+// TEST LIVE DATA
+const TEST_LIVE = [
   0,-24.25,-23.90,-6.10,-7.60,-1.85,8.10,5.60,4.20,19.65,
   29.30,23.30,20.05,9.30,9.70,10.05,-6.50,-3.80,-0.90,5.35,
   2.95,-2.55,9.95,4.35,8.05,-4.05,-5.00,2.15,6.30,4.20,
@@ -243,107 +434,111 @@ const FORECAST = [
   -95.10,-93.15,-84.95,-89.05,-84.50
 ];
 
-// TEST DATA
-const TEST = [...FORECAST];
-
 // ============================================================
 // SETTINGS
 // ============================================================
-const START_HOUR=9, START_MIN=15;
-const REFRESH_MS=60000;
+const START_HOUR=9,START_MIN=15,REFRESH_MS=60000;
 const YAHOO='https://query1.finance.yahoo.com/v8/finance/chart/%5ENSEI?interval=1m&range=1d';
 const PROXIES=[
   u=>u,
   u=>`https://corsproxy.io/?${encodeURIComponent(u)}`,
   u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
 ];
-
-// ============================================================
-// STATE
-// ============================================================
 const mas={20:{active:true,color:'#f0b429'},50:{active:true,color:'#e040fb'}};
-let liveData=[], liveRaw=[], currentTF=1, dataSource='live';
-let PRE_OPEN=null, refreshTimer, countdownTimer, cdVal=60;
-let fcData=[], lvData=[], fcMA20=[], fcMA50=[], lvMA20=[], lvMA50=[];
-let startIdx=0, visCount=0;
-let isDrag=false, dragX=0, dragIdx=0;
-let mouseX=-1, mouseY=-1, W, H;
+
+let liveData=[],liveRaw=[],currentTF=1,dataSource='live';
+let PRE_OPEN=null,refreshTimer,countdownTimer,cdVal=60;
+let lvData=[],fcDataArr=[],lvMA20=[],lvMA50=[];
+let startIdx=0,visCount=0;
+let isDrag=false,dragX=0,dragIdx=0;
+let mouseX=-1,mouseY=-1,W,H;
 
 // ============================================================
 // INIT
 // ============================================================
-function initDashboard() {
-  buildChart();
+function initDashboard(){
+  buildLegend();
+  buildAll();
   resize();
   setSource('live');
+}
+
+function buildLegend(){
+  const leg=document.getElementById('legend');
+  leg.innerHTML=`<div class="leg"><div class="leg-line" style="background:#fff"></div><span>Live (Actual)</span></div>`;
+  FORECASTS.forEach(f=>{
+    leg.innerHTML+=`<div class="leg"><div class="leg-line" style="background:${f.color};border-top:2px dashed ${f.color}"></div><span>${f.name}</span></div>`;
+  });
 }
 
 // ============================================================
 // PRE-OPEN
 // ============================================================
-window.setPreOpen = function(val) {
-  PRE_OPEN = parseFloat(val);
-  if (!PRE_OPEN || isNaN(PRE_OPEN)) return;
-  if (liveRaw.length > 0) {
-    liveData = liveRaw.map(v => +(v - PRE_OPEN).toFixed(2));
-    buildChart(); calcSim(); draw();
+window.setPreOpen=function(val){
+  PRE_OPEN=parseFloat(val);
+  if(!PRE_OPEN||isNaN(PRE_OPEN))return;
+  if(liveRaw.length>0){
+    liveData=liveRaw.map(v=>+(v-PRE_OPEN).toFixed(2));
+    buildAll();calcAllSim();renderTable();draw();
   }
 };
 
 // ============================================================
 // FETCH
 // ============================================================
-async function tryFetch(url) {
-  for (let i=0;i<PROXIES.length;i++) {
-    try {
+async function tryFetch(url){
+  for(let i=0;i<PROXIES.length;i++){
+    try{
       setStatus(`⏳ Trying ${i+1}/${PROXIES.length}...`);
-      const res  = await fetch(PROXIES[i](url+'&nc='+Date.now()),{mode:'cors'});
-      if (!res.ok) throw new Error('HTTP '+res.status);
-      const text = await res.text();
-      const json = JSON.parse(text);
-      const data = json.contents ? JSON.parse(json.contents) : json;
-      const closes = data?.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
-      if (!closes||closes.length<2) throw new Error('no data');
-      const clean = closes.filter(v=>v!=null&&!isNaN(v));
-      if (clean.length<2) throw new Error('empty');
+      const res=await fetch(PROXIES[i](url+'&nc='+Date.now()),{mode:'cors'});
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      const txt=await res.text();
+      const json=JSON.parse(txt);
+      const data=json.contents?JSON.parse(json.contents):json;
+      const closes=data?.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
+      if(!closes||closes.length<2)throw new Error('no data');
+      const clean=closes.filter(v=>v!=null&&!isNaN(v));
+      if(clean.length<2)throw new Error('empty');
       return clean;
-    } catch(e) { console.warn(`Proxy ${i+1}:`,e.message); }
+    }catch(e){console.warn(`Proxy ${i+1}:`,e.message);}
   }
   return null;
 }
 
-async function fetchAndUpdate() {
-  if (dataSource==='test') {
-    liveData=TEST; setStatus(`📋 Test · ${TEST.length} bars`); buildChart(); calcSim(); draw(); return;
+async function fetchAndUpdate(){
+  if(dataSource==='test'){
+    liveData=TEST_LIVE;
+    setStatus(`📋 Test · ${TEST_LIVE.length} bars`);
+    buildAll();calcAllSim();renderTable();draw();return;
   }
-  const raw = await tryFetch(YAHOO);
-  if (raw&&raw.length>1) {
-    liveRaw  = raw;
-    const base = PRE_OPEN || raw[0];
-    liveData   = raw.map(v=>+(v-base).toFixed(2));
+  const raw=await tryFetch(YAHOO);
+  if(raw&&raw.length>1){
+    liveRaw=raw;
+    const base=PRE_OPEN||raw[0];
+    liveData=raw.map(v=>+(v-base).toFixed(2));
     setStatus(`<span style="color:#ef5350;animation:pulse 1.5s infinite;display:inline-block">●</span> Live · ${liveData.length} bars · <span id="cd">${cdVal}</span>s`);
     document.getElementById('last-update').textContent='Updated: '+new Date().toLocaleTimeString('en-IN');
-  } else {
-    if (liveData.length===0) { liveData=TEST; setStatus('⚠️ Yahoo failed · test data'); }
+  }else{
+    if(liveData.length===0){liveData=TEST_LIVE;setStatus('⚠️ Yahoo failed · test data');}
     else setStatus(`⚠️ Refresh failed · ${liveData.length} bars`);
   }
-  buildChart(); calcSim(); draw(); startCD();
+  buildAll();calcAllSim();renderTable();draw();startCD();
 }
 
-function setStatus(html) { document.getElementById('status').innerHTML=html; }
+function setStatus(html){document.getElementById('status').innerHTML=html;}
 
-function startCD() {
-  clearInterval(countdownTimer); cdVal=REFRESH_MS/1000;
-  countdownTimer=setInterval(()=>{ cdVal--; const el=document.getElementById('cd'); if(el)el.textContent=cdVal; if(cdVal<=0)clearInterval(countdownTimer); },1000);
+function startCD(){
+  clearInterval(countdownTimer);cdVal=REFRESH_MS/1000;
+  countdownTimer=setInterval(()=>{cdVal--;const el=document.getElementById('cd');if(el)el.textContent=cdVal;if(cdVal<=0)clearInterval(countdownTimer);},1000);
 }
 
-window.setSource = function(src) {
+window.setSource=function(src){
   dataSource=src;
   document.querySelectorAll('[id^="src-"]').forEach(b=>b.classList.remove('active'));
   document.getElementById('src-'+src).classList.add('active');
   clearInterval(refreshTimer);
   fetchAndUpdate();
-  if(src==='live') refreshTimer=setInterval(fetchAndUpdate,REFRESH_MS);
+  if(src==='live')refreshTimer=setInterval(fetchAndUpdate,REFRESH_MS);
 };
 
 // ============================================================
@@ -360,19 +555,19 @@ function resample(arr,tf){
   if(rem>0){const g=arr.slice(tot*tf);bars.push({label:makeLabel(tot,tf),c:+g[g.length-1].toFixed(2)});}
   return bars;
 }
-function calcMA(arr,p){ return arr.map((_,i)=>{ if(i<p-1)return null; return +(arr.slice(i-p+1,i+1).reduce((a,b)=>a+b.c,0)/p).toFixed(2); }); }
+function calcMA(arr,p){return arr.map((_,i)=>{if(i<p-1)return null;return +(arr.slice(i-p+1,i+1).reduce((a,b)=>a+b.c,0)/p).toFixed(2);});}
 
-function buildChart(){
-  fcData=resample(FORECAST,currentTF); lvData=resample(liveData,currentTF);
-  fcMA20=calcMA(fcData,20); fcMA50=calcMA(fcData,50);
-  lvMA20=calcMA(lvData,20); lvMA50=calcMA(lvData,50);
-  const max=Math.max(fcData.length,lvData.length);
-  visCount=max; startIdx=0;
-  document.getElementById('bar-count').textContent=`LV:${lvData.length} FC:${fcData.length} · ${currentTF}m`;
+function buildAll(){
+  lvData=resample(liveData,currentTF);
+  fcDataArr=FORECASTS.map(f=>resample(f.data,currentTF));
+  lvMA20=calcMA(lvData,20);lvMA50=calcMA(lvData,50);
+  const max=Math.max(lvData.length,...fcDataArr.map(f=>f.length));
+  visCount=max;startIdx=0;
+  document.getElementById('bar-count').textContent=`LV:${lvData.length} · ${currentTF}m`;
 }
 
 // ============================================================
-// SIMILARITY — all 30 metrics
+// SIMILARITY ENGINE
 // ============================================================
 function pearson(a,b){
   const n=Math.min(a.length,b.length);if(n<2)return 0;
@@ -385,6 +580,102 @@ function pearson(a,b){
 }
 function r2p(r){return Math.max(0,Math.min(100,Math.round(((r+1)/2)*100)));}
 
+function analyse(lv,fc){
+  const n=Math.min(lv.length,fc.length);
+  if(n<2)return null;
+  const ax=lv.slice(0,n),bx=fc.slice(0,n);
+  // correlations
+  const corrFull=r2p(pearson(ax,bx));
+  const w60=Math.min(n,Math.floor(60/currentTF));
+  const corr60=r2p(pearson(ax.slice(Math.max(0,n-w60)),bx.slice(Math.max(0,n-w60))));
+  const w30=Math.min(n,Math.floor(30/currentTF));
+  const corr30=r2p(pearson(ax.slice(Math.max(0,n-w30)),bx.slice(Math.max(0,n-w30))));
+  const w15=Math.min(n,Math.floor(15/currentTF));
+  const corr15=r2p(pearson(ax.slice(Math.max(0,n-w15)),bx.slice(Math.max(0,n-w15))));
+  const w5=Math.min(n,Math.floor(5/currentTF));
+  const corr5=r2p(pearson(ax.slice(Math.max(0,n-w5)),bx.slice(Math.max(0,n-w5))));
+  // best/worst window
+  const ws=Math.max(2,Math.floor(30/currentTF));
+  let bestWR=-2,bestWI=0,worstWR=2,worstWI=0;
+  for(let i=0;i<=n-ws;i++){
+    const r=pearson(ax.slice(i,i+ws),bx.slice(i,i+ws));
+    if(r>bestWR){bestWR=r;bestWI=i;}
+    if(r<worstWR){worstWR=r;worstWI=i;}
+  }
+  const bestWin=makeLabel(bestWI,currentTF);
+  const worstWin=makeLabel(worstWI,currentTF);
+  // direction
+  let dirT=0,dirM=0,upT=0,upM=0,dnT=0,dnM=0,streak=0,maxStreak=0,curStreak=0;
+  for(let i=1;i<n;i++){
+    const ld=ax[i]-ax[i-1],fd=bx[i]-bx[i-1];
+    const same=(ld>=0&&fd>=0)||(ld<0&&fd<0);
+    dirT++;if(same){dirM++;streak++;maxStreak=Math.max(maxStreak,streak);}else streak=0;
+    if(ld>=0){upT++;if(same)upM++;}else{dnT++;if(same)dnM++;}
+  }
+  curStreak=0;for(let i=n-1;i>=1;i--){const ld=ax[i]-ax[i-1],fd=bx[i]-bx[i-1];if((ld>=0&&fd>=0)||(ld<0&&fd<0))curStreak++;else break;}
+  const dirAcc=dirT?Math.round(dirM/dirT*100):0;
+  const upAcc=upT?Math.round(upM/upT*100):0;
+  const dnAcc=dnT?Math.round(dnM/dnT*100):0;
+  // magnitude
+  const errs=ax.map((v,i)=>Math.abs(v-bx[i]));
+  const mae=+(errs.reduce((a,b)=>a+b,0)/n).toFixed(1);
+  const maxErr=+Math.max(...errs).toFixed(1);
+  const within5=Math.round(errs.filter(e=>e<=5).length/n*100);
+  const within10=Math.round(errs.filter(e=>e<=10).length/n*100);
+  const within20=Math.round(errs.filter(e=>e<=20).length/n*100);
+  // time shift
+  const mxS=Math.min(60,Math.floor(n/3));
+  let bestS=0,bestR=-2;
+  for(let s=-mxS;s<=mxS;s++){
+    let la,fb;
+    if(s>=0){la=ax.slice(s,n);fb=bx.slice(0,n-s);}
+    else{la=ax.slice(0,n+s);fb=bx.slice(-s,n);}
+    const r=pearson(la,fb);if(r>bestR){bestR=r;bestS=s;}
+  }
+  const shiftMins=bestS*currentTF;
+  const shiftLabel=shiftMins===0?'In sync':shiftMins>0?`+${shiftMins}m`:`${shiftMins}m`;
+  // session
+  const mEnd=Math.min(n,Math.floor(165/currentTF));
+  const corrMorn=mEnd>1?r2p(pearson(ax.slice(0,mEnd),bx.slice(0,mEnd))):0;
+  const corrAftn=mEnd<n?r2p(pearson(ax.slice(mEnd),bx.slice(mEnd))):0;
+  // trend/peak/trough
+  const lvHiI=ax.indexOf(Math.max(...ax)),lvLoI=ax.indexOf(Math.min(...ax));
+  const fcHiI=bx.indexOf(Math.max(...bx)),fcLoI=bx.indexOf(Math.min(...bx));
+  const peakDiff=Math.abs(lvHiI-fcHiI)*currentTF;
+  const troughDiff=Math.abs(lvLoI-fcLoI)*currentTF;
+  const peakOk=peakDiff<=30,troughOk=troughDiff<=30;
+  const lvHi=Math.max(...ax),fcHi=Math.max(...bx);
+  const lvLo=Math.min(...ax),fcLo=Math.min(...bx);
+  const hiAcc=100-Math.min(100,Math.round(Math.abs(lvHi-fcHi)/Math.max(1,Math.abs(lvHi))*100));
+  const loAcc=100-Math.min(100,Math.round(Math.abs(lvLo-fcLo)/Math.max(1,Math.abs(lvLo))*100));
+  const eodAcc=100-Math.min(100,Math.round(Math.abs(ax[n-1]-bx[n-1])/Math.max(1,Math.abs(ax[n-1]))*100));
+  const trendMatch=(ax[n-1]>=ax[0])===(bx[n-1]>=bx[0]);
+  // composite
+  const score=Math.round(corrFull*0.20+corr30*0.15+corr15*0.10+dirAcc*0.15+within10*0.10+corrMorn*0.10+corrAftn*0.10+hiAcc*0.05+loAcc*0.05);
+  return{corrFull,corr60,corr30,corr15,corr5,bestWin,worstWin,dirAcc,upAcc,dnAcc,maxStreak,curStreak,mae,maxErr,within5,within10,within20,shiftMins,shiftLabel,corrMorn,corrAftn,trendMatch,peakOk,troughOk,peakDiff,troughDiff,hiAcc,loAcc,eodAcc,score};
+}
+
+let results=[];
+
+function calcAllSim(){
+  const lv=liveData;
+  results=FORECASTS.map(f=>({...f,res:lv.length>=2?analyse(lv,f.data.slice(0,Math.min(lv.length+60,375))):null}));
+  // update 4 sim boxes using best model
+  const best=results.reduce((b,r)=>r.res&&(!b.res||r.res.score>b.res.score)?r:b,results[0]);
+  if(best&&best.res){
+    const r=best.res,n=Math.min(liveData.length,375);
+    setBox('full',r.corrFull,`${n} bars · ${best.name}`);
+    setBox('30',r.corr30,`last ${Math.floor(30/currentTF)} bars`);
+    setBox('15',r.corr15,`last ${Math.floor(15/currentTF)} bars`);
+    const se=document.getElementById('sim-shift');
+    const sr=r2p(pearson(liveData.slice(0,n),best.data.slice(0,n)));
+    document.getElementById('bar-shift').style.width=sr+'%';
+    if(r.shiftMins===0){se.textContent='In sync';se.style.color='#26a69a';document.getElementById('sub-shift').textContent=`${best.name} aligned`;}
+    else if(r.shiftMins>0){se.textContent=`+${r.shiftMins}m`;se.style.color='#f0b429';document.getElementById('sub-shift').textContent=`${best.name} ${r.shiftMins}m ahead`;}
+    else{se.textContent=`${r.shiftMins}m`;se.style.color='#e040fb';document.getElementById('sub-shift').textContent=`${best.name} ${Math.abs(r.shiftMins)}m behind`;}
+  }
+}
+
 function setBox(key,pct,sub){
   const col=pct>=70?'#26a69a':pct>=50?'#f0b429':'#ef5350';
   document.getElementById('sim-'+key).textContent=pct+'%';
@@ -394,95 +685,107 @@ function setBox(key,pct,sub){
   document.getElementById('sub-'+key).textContent=sub;
 }
 
-function calcSim(){
-  const lv=liveData, fc=FORECAST, n=Math.min(lv.length,fc.length);
-  if(n<2)return;
-  setBox('full',r2p(pearson(lv.slice(0,n),fc.slice(0,n))),n+' of 375 bars');
-  const w30=Math.max(2,Math.floor(30/currentTF));
-  setBox('30',r2p(pearson(lv.slice(Math.max(0,n-w30)),fc.slice(Math.max(0,n-w30),n))),`last ${Math.min(w30,n)} bars`);
-  const w15=Math.max(2,Math.floor(15/currentTF));
-  setBox('15',r2p(pearson(lv.slice(Math.max(0,n-w15)),fc.slice(Math.max(0,n-w15),n))),`last ${Math.min(w15,n)} bars`);
-  const maxS=Math.min(60,Math.floor(n/3));
-  let bestS=0,bestR=-2;
-  for(let s=-maxS;s<=maxS;s++){
-    let la,fb;
-    if(s>=0){la=lv.slice(s,n);fb=fc.slice(0,n-s);}
-    else{la=lv.slice(0,n+s);fb=fc.slice(-s,n);}
-    const r=pearson(la,fb);if(r>bestR){bestR=r;bestS=s;}
+// ============================================================
+// COMPARISON TABLE
+// ============================================================
+function renderTable(){
+  if(!results.length)return;
+  const ranked=[...results].sort((a,b)=>(b.res?.score||0)-(a.res?.score||0));
+  function bestIdx(key,higher=true){
+    let bVal=higher?-Infinity:Infinity,bI=-1;
+    results.forEach((r,i)=>{if(r.res){const v=r.res[key];if(typeof v==='number'&&(higher?v>bVal:v<bVal)){bVal=v;bI=i;}}});
+    return bI;
   }
-  const sm=bestS*currentTF;
-  const se=document.getElementById('sim-shift');
-  document.getElementById('bar-shift').style.width=r2p(bestR)+'%';
-  if(sm===0){se.textContent='In sync';se.style.color='#26a69a';document.getElementById('sub-shift').textContent='aligned';}
-  else if(sm>0){se.textContent=`+${sm}m`;se.style.color='#f0b429';document.getElementById('sub-shift').textContent=`live ${sm}m ahead`;}
-  else{se.textContent=`${sm}m`;se.style.color='#e040fb';document.getElementById('sub-shift').textContent=`live ${Math.abs(sm)}m behind`;}
+  const head=document.getElementById('tbl-head');
+  head.innerHTML='<tr><th>Metric</th>'+results.map(r=>`<th style="color:${r.color}">${r.name}</th>`).join('')+'</tr>';
+  const rows=[
+    {g:'── CORRELATION ──'},
+    {l:'Full day',        k:'corrFull', u:'%', h:true},
+    {l:'Last 60 min',    k:'corr60',   u:'%', h:true},
+    {l:'Last 30 min',    k:'corr30',   u:'%', h:true},
+    {l:'Last 15 min',    k:'corr15',   u:'%', h:true},
+    {l:'Last 5 min',     k:'corr5',    u:'%', h:true},
+    {l:'Best window',    k:'bestWin',  u:'',  h:null},
+    {l:'Worst window',   k:'worstWin', u:'',  h:null},
+    {g:'── DIRECTION ──'},
+    {l:'Overall acc',    k:'dirAcc',   u:'%', h:true},
+    {l:'Up moves',       k:'upAcc',    u:'%', h:true},
+    {l:'Down moves',     k:'dnAcc',    u:'%', h:true},
+    {l:'Best streak',    k:'maxStreak',u:'',  h:true},
+    {l:'Current streak', k:'curStreak',u:'',  h:true},
+    {g:'── MAGNITUDE ──'},
+    {l:'Avg error (pts)',k:'mae',      u:'',  h:false},
+    {l:'Max error (pts)',k:'maxErr',   u:'',  h:false},
+    {l:'Within 5 pts',  k:'within5',  u:'%', h:true},
+    {l:'Within 10 pts', k:'within10', u:'%', h:true},
+    {l:'Within 20 pts', k:'within20', u:'%', h:true},
+    {g:'── TIME ──'},
+    {l:'Time shift',     k:'shiftLabel',u:'', h:null},
+    {l:'Morning match',  k:'corrMorn', u:'%', h:true},
+    {l:'Afternoon match',k:'corrAftn', u:'%', h:true},
+    {g:'── TREND ──'},
+    {l:'Day trend match',k:'trendMatch',u:'', h:null,bool:true},
+    {l:'Peak timing',    k:'peakOk',   u:'',  h:null,bool:true},
+    {l:'Trough timing',  k:'troughOk', u:'',  h:null,bool:true},
+    {l:'High accuracy',  k:'hiAcc',    u:'%', h:true},
+    {l:'Low accuracy',   k:'loAcc',    u:'%', h:true},
+    {l:'End of day',     k:'eodAcc',   u:'%', h:true},
+    {g:'── OVERALL ──'},
+    {l:'Composite score',k:'score',    u:'%', h:true},
+    {l:'Rank',           k:'rank',     u:'',  h:null, special:'rank'},
+  ];
+  const tbody=document.getElementById('tbl-body');
+  tbody.innerHTML='';
+  rows.forEach(row=>{
+    const tr=document.createElement('tr');
+    if(row.g){
+      tr.className='grp';
+      tr.innerHTML=`<td colspan="${results.length+1}">${row.g}</td>`;
+      tbody.appendChild(tr);return;
+    }
+    const bI=row.h!==null&&!row.bool&&row.special!=='rank'?bestIdx(row.k,row.h):-1;
+    let cells=`<td>${row.l}</td>`;
+    results.forEach((r,i)=>{
+      if(!r.res){cells+=`<td style="color:#363a45">--</td>`;return;}
+      if(row.special==='rank'){
+        const pos=ranked.findIndex(x=>x.name===r.name)+1;
+        const medal=pos===1?'🥇':pos===2?'🥈':'🥉';
+        cells+=`<td class="${pos===1?'winner':''}">${medal}</td>`;return;
+      }
+      const val=r.res[row.k];
+      let disp=val,cls='';
+      if(row.bool){disp=val?'✅':'❌';}
+      else if(row.u==='%'&&typeof val==='number'){
+        disp=val+'%';cls=val>=70?'g':val>=50?'y':'r';
+      }
+      if(i===bI&&!row.bool)cls=(cls||'')+(cls?' ':'')+'best';
+      cells+=`<td class="${i===bI&&!row.bool?'winner':''}"><span class="${cls}">${disp}</span></td>`;
+    });
+    tr.innerHTML=cells;tbody.appendChild(tr);
+  });
 }
 
 // ============================================================
-// EXPORT API JSON
+// EXPORT API
 // ============================================================
-window.exportAPI = function() {
-  const lv=liveData, fc=FORECAST, n=Math.min(lv.length,fc.length);
-  const w30=Math.max(2,Math.floor(30/currentTF));
-  const w15=Math.max(2,Math.floor(15/currentTF));
-  // direction accuracy
-  let dir=0,up=0,upT=0,dn=0,dnT=0,streak=0,maxS=0,cur=0;
-  for(let i=1;i<n;i++){
-    const ld=lv[i]-lv[i-1],fd=fc[i]-fc[i-1];
-    const same=(ld>=0&&fd>=0)||(ld<0&&fd<0);
-    dir++;if(same){streak++;maxS=Math.max(maxS,streak);}else streak=0;
-    if(ld>=0){upT++;if(same)up++;}else{dnT++;if(same)dn++;}
-  }
-  // current streak from end
-  cur=0;for(let i=n-1;i>=1;i--){const ld=lv[i]-lv[i-1],fd=fc[i]-fc[i-1];if((ld>=0&&fd>=0)||(ld<0&&fd<0))cur++;else break;}
-  // errors
-  const errs=lv.slice(0,n).map((v,i)=>Math.abs(v-fc[i]));
-  const mae=+(errs.reduce((a,b)=>a+b,0)/n).toFixed(1);
-  // time shift
-  const mxSh=Math.min(60,Math.floor(n/3));
-  let bS=0,bR=-2;
-  for(let s=-mxSh;s<=mxSh;s++){
-    let la,fb;
-    if(s>=0){la=lv.slice(s,n);fb=fc.slice(0,n-s);}
-    else{la=lv.slice(0,n+s);fb=fc.slice(-s,n);}
-    const r=pearson(la,fb);if(r>bR){bR=r;bS=s;}
-  }
-  const mornEnd=Math.min(n,165);
+window.exportAPI=function(){
   const data={
-    date:     new Date().toISOString().slice(0,10),
-    symbol:   'NIFTY50',
-    exchange: 'NSE',
-    interval: '1min',
-    bars:     FORECAST.length,
+    date:new Date().toISOString().slice(0,10),
+    symbol:'NIFTY50',exchange:'NSE',interval:'1min',
+    pre_open:PRE_OPEN||null,
     live_bars:liveData.length,
-    pre_open: PRE_OPEN||null,
-    forecast: FORECAST,
-    metrics:{
-      correlation_full:   r2p(pearson(lv.slice(0,n),fc.slice(0,n))),
-      correlation_30min:  r2p(pearson(lv.slice(Math.max(0,n-w30)),fc.slice(Math.max(0,n-w30),n))),
-      correlation_15min:  r2p(pearson(lv.slice(Math.max(0,n-w15)),fc.slice(Math.max(0,n-w15),n))),
-      direction_acc:      dir?Math.round(streak/dir*100):0,
-      up_accuracy:        upT?Math.round(up/upT*100):0,
-      down_accuracy:      dnT?Math.round(dn/dnT*100):0,
-      best_streak:        maxS,
-      current_streak:     cur,
-      avg_error:          mae,
-      max_error:          +Math.max(...errs).toFixed(1),
-      within_5pts:        Math.round(errs.filter(e=>e<=5).length/n*100),
-      within_10pts:       Math.round(errs.filter(e=>e<=10).length/n*100),
-      within_20pts:       Math.round(errs.filter(e=>e<=20).length/n*100),
-      time_shift_mins:    bS*currentTF,
-      time_shift_label:   bS===0?'In sync':bS>0?`+${bS*currentTF}m`:`${bS*currentTF}m`,
-      morning_corr:       mornEnd>1?r2p(pearson(lv.slice(0,mornEnd),fc.slice(0,mornEnd))):0,
-      afternoon_corr:     mornEnd<n?r2p(pearson(lv.slice(mornEnd),fc.slice(mornEnd))):0,
-      composite_score:    Math.round(r2p(pearson(lv.slice(0,n),fc.slice(0,n)))*0.4+Math.round(dir?streak/dir*100:0)*0.3+Math.round(errs.filter(e=>e<=10).length/n*100)*0.3),
-    },
-    updated_at: new Date().toISOString()
+    models:FORECASTS.map((f,i)=>({
+      name:f.name,
+      bars:f.data.length,
+      forecast:f.data,
+      metrics:results[i]?.res||null
+    })),
+    updated_at:new Date().toISOString()
   };
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  a.href=url; a.download='forecast.json'; a.click();
+  a.href=url;a.download='forecast.json';a.click();
   URL.revokeObjectURL(url);
 };
 
@@ -498,19 +801,18 @@ const PAD={L:10,R:72,T:14,B:26};
 function resize(){W=chartArea.clientWidth;H=chartArea.clientHeight;cv.width=W;cv.height=H;draw();}
 function pxY(v,lo,hi){return PAD.T+(1-(v-lo)/(hi-lo))*(H-PAD.T-PAD.B);}
 function pxX(i,cw){return PAD.L+i*cw+cw/2;}
-function fitAll(){startIdx=0;visCount=Math.max(fcData.length,lvData.length);draw();}
-function zoom(dir){
-  const max=Math.max(fcData.length,lvData.length);
+window.fitAll=function(){startIdx=0;visCount=Math.max(lvData.length,...fcDataArr.map(f=>f.length));draw();};
+window.zoom=function(dir){
+  const max=Math.max(lvData.length,...fcDataArr.map(f=>f.length));
   const step=Math.max(5,Math.floor(visCount*0.15));
   visCount=Math.max(10,Math.min(max,visCount+dir*step));
   startIdx=Math.max(0,Math.min(max-visCount,startIdx));draw();
-}
-window.zoom=zoom; window.fitAll=fitAll;
+};
 window.setTF=function(tf,btn){
   currentTF=tf;
   document.querySelectorAll('.btn[onclick^="setTF"]').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  buildChart();calcSim();draw();
+  buildAll();calcAllSim();renderTable();draw();
 };
 window.toggleMA=function(p){
   mas[p].active=!mas[p].active;
@@ -519,131 +821,149 @@ window.toggleMA=function(p){
 };
 
 function draw(){
-  ctx.clearRect(0,0,W,H); ctx.fillStyle='#131722'; ctx.fillRect(0,0,W,H);
-  const max=Math.max(fcData.length,lvData.length);
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#131722';ctx.fillRect(0,0,W,H);
+  const max=Math.max(lvData.length,...fcDataArr.map(f=>f.length));
   if(!max)return;
   if(visCount===0)visCount=max;
   const cw=(W-PAD.L-PAD.R)/visCount;
-  const fcSl=fcData.slice(startIdx,startIdx+visCount);
   const lvSl=lvData.slice(startIdx,startIdx+visCount);
-  const allV=[...fcSl.map(d=>d.c),...lvSl.map(d=>d.c)].filter(v=>v!==undefined);
+  const fcSls=fcDataArr.map(f=>f.slice(startIdx,startIdx+visCount));
+  const allV=[...lvSl.map(d=>d.c),...fcSls.flatMap(f=>f.map(d=>d.c))].filter(v=>v!==undefined);
   if(!allV.length)return;
   let lo=Math.min(...allV,0),hi=Math.max(...allV,0);
-  const pad=Math.max((hi-lo)*0.10,1); lo-=pad; hi+=pad;
+  const pad=Math.max((hi-lo)*0.10,1);lo-=pad;hi+=pad;
 
   // gridlines
   const gc=Math.min(6,Math.floor(H/50));
   for(let i=0;i<=gc;i++){
-    const y=PAD.T+i*(H-PAD.T-PAD.B)/gc, val=hi-i*(hi-lo)/gc;
-    ctx.strokeStyle='rgba(128,128,128,0.10)'; ctx.lineWidth=0.5;
-    ctx.beginPath(); ctx.moveTo(PAD.L,y); ctx.lineTo(W-PAD.R,y); ctx.stroke();
-    ctx.fillStyle='#555'; ctx.font='10px monospace'; ctx.textAlign='left';
+    const y=PAD.T+i*(H-PAD.T-PAD.B)/gc,val=hi-i*(hi-lo)/gc;
+    ctx.strokeStyle='rgba(128,128,128,0.10)';ctx.lineWidth=0.5;
+    ctx.beginPath();ctx.moveTo(PAD.L,y);ctx.lineTo(W-PAD.R,y);ctx.stroke();
+    ctx.fillStyle='#555';ctx.font='10px monospace';ctx.textAlign='left';
     ctx.fillText((val>=0?'+':'')+val.toFixed(1),W-PAD.R+4,y+4);
   }
 
   // zero line
   const zy=pxY(0,lo,hi);
-  ctx.strokeStyle='rgba(200,200,200,0.25)'; ctx.lineWidth=1; ctx.setLineDash([5,5]);
-  ctx.beginPath(); ctx.moveTo(PAD.L,zy); ctx.lineTo(W-PAD.R,zy); ctx.stroke();
+  ctx.strokeStyle='rgba(200,200,200,0.25)';ctx.lineWidth=1;ctx.setLineDash([5,5]);
+  ctx.beginPath();ctx.moveTo(PAD.L,zy);ctx.lineTo(W-PAD.R,zy);ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle='#777'; ctx.font='bold 10px monospace'; ctx.textAlign='left';
+  ctx.fillStyle='#777';ctx.font='bold 10px monospace';ctx.textAlign='left';
   ctx.fillText('0',W-PAD.R+4,zy+4);
 
-  function plotLine(sl,maA,maB,col,mcA,mcB,thick=1.8){
-    if(!sl||!sl.length)return;
-    const lastC=sl[sl.length-1].c;
+  // forecast lines (dashed, thin)
+  fcSls.forEach((sl,fi)=>{
+    if(!sl.length)return;
+    const col=FORECASTS[fi].color;
+    ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.lineJoin='round';ctx.setLineDash([6,3]);
+    ctx.beginPath();
+    sl.forEach((d,i)=>{const x=pxX(i,cw),y=pxY(d.c,lo,hi);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+    ctx.stroke();ctx.setLineDash([]);
+    // MA for each forecast (very subtle)
+    // skipped to keep chart clean
+  });
+
+  // live line (white, solid, thick)
+  if(lvSl.length){
+    // gradient
+    const lastC=lvSl[lvSl.length-1].c;
     const grad=ctx.createLinearGradient(0,PAD.T,0,H-PAD.B);
-    if(lastC>=0){grad.addColorStop(0,col+'22');grad.addColorStop(1,col+'00');}
-    else{grad.addColorStop(0,col+'00');grad.addColorStop(1,col+'22');}
+    if(lastC>=0){grad.addColorStop(0,'rgba(255,255,255,0.10)');grad.addColorStop(1,'rgba(255,255,255,0.00)');}
+    else{grad.addColorStop(0,'rgba(255,255,255,0.00)');grad.addColorStop(1,'rgba(255,255,255,0.10)');}
     ctx.beginPath();
-    sl.forEach((d,i)=>{const x=pxX(i,cw),y=pxY(d.c,lo,hi);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
-    ctx.lineTo(pxX(sl.length-1,cw),zy); ctx.lineTo(pxX(0,cw),zy);
-    ctx.closePath(); ctx.fillStyle=grad; ctx.fill();
-    ctx.strokeStyle=col; ctx.lineWidth=thick; ctx.lineJoin='round'; ctx.setLineDash([]);
+    lvSl.forEach((d,i)=>{const x=pxX(i,cw),y=pxY(d.c,lo,hi);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+    ctx.lineTo(pxX(lvSl.length-1,cw),zy);ctx.lineTo(pxX(0,cw),zy);
+    ctx.closePath();ctx.fillStyle=grad;ctx.fill();
+    // line
+    ctx.strokeStyle='#ffffff';ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.setLineDash([]);
     ctx.beginPath();
-    sl.forEach((d,i)=>{const x=pxX(i,cw),y=pxY(d.c,lo,hi);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+    lvSl.forEach((d,i)=>{const x=pxX(i,cw),y=pxY(d.c,lo,hi);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
     ctx.stroke();
-    [[maA,mcA],[maB,mcB]].forEach(([arr,mc])=>{
-      if(!arr||!mc)return;
-      ctx.strokeStyle=mc; ctx.lineWidth=1; ctx.lineJoin='round'; ctx.setLineDash([3,3]);
-      ctx.beginPath(); let first=true;
-      sl.forEach((_,i)=>{
-        const m=arr[startIdx+i]; if(m===null||m===undefined)return;
+    // MA on live
+    [[lvMA20,mas[20]],[lvMA50,mas[50]]].forEach(([arr,cfg])=>{
+      if(!cfg.active)return;
+      ctx.strokeStyle=cfg.color;ctx.lineWidth=1;ctx.lineJoin='round';ctx.setLineDash([3,3]);
+      ctx.beginPath();let first=true;
+      lvSl.forEach((_,i)=>{
+        const m=arr[startIdx+i];if(m===null||m===undefined)return;
         const x=pxX(i,cw),y=pxY(m,lo,hi);
         if(first){ctx.moveTo(x,y);first=false;}else ctx.lineTo(x,y);
-      }); ctx.stroke(); ctx.setLineDash([]);
+      });ctx.stroke();ctx.setLineDash([]);
     });
+    // ACTUAL label
+    if(lvSl.length>10){
+      const mi=Math.floor(lvSl.length/2);
+      const mx=pxX(mi,cw),my=pxY(lvSl[mi].c,lo,hi)-14;
+      ctx.fillStyle='rgba(255,255,255,0.12)';ctx.beginPath();ctx.rect(mx-24,my-8,48,16);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font='bold 9px monospace';ctx.textAlign='center';
+      ctx.fillText('ACTUAL',mx,my+4);
+    }
   }
-
-  // forecast (green dashed thin)
-  ctx.setLineDash([6,3]);
-  plotLine(fcSl,mas[20].active?fcMA20:null,mas[50].active?fcMA50:null,'#26a69a','#f0b42966','#e040fb66',1.5);
-  ctx.setLineDash([]);
-
-  // live (white solid thick)
-  plotLine(lvSl,mas[20].active?lvMA20:null,mas[50].active?lvMA50:null,'#ffffff','#f0b429','#e040fb',2.5);
 
   // crosshair
   if(mouseX>=PAD.L&&mouseX<=W-PAD.R&&mouseY>=PAD.T&&mouseY<=H-PAD.B){
     const i=Math.max(0,Math.min(visCount-1,Math.floor((mouseX-PAD.L)/cw)));
-    ctx.strokeStyle='rgba(200,200,200,0.20)'; ctx.lineWidth=0.7; ctx.setLineDash([3,3]);
-    ctx.beginPath(); ctx.moveTo(mouseX,PAD.T); ctx.lineTo(mouseX,H-PAD.B); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(PAD.L,mouseY); ctx.lineTo(W-PAD.R,mouseY); ctx.stroke();
+    ctx.strokeStyle='rgba(200,200,200,0.20)';ctx.lineWidth=0.7;ctx.setLineDash([3,3]);
+    ctx.beginPath();ctx.moveTo(mouseX,PAD.T);ctx.lineTo(mouseX,H-PAD.B);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(PAD.L,mouseY);ctx.lineTo(W-PAD.R,mouseY);ctx.stroke();
     ctx.setLineDash([]);
-    const fc=fcSl[i], lv2=lvSl[i];
-    if(fc){ctx.beginPath();ctx.arc(pxX(i,cw),pxY(fc.c,lo,hi),4,0,Math.PI*2);ctx.fillStyle='#26a69a';ctx.fill();ctx.strokeStyle='#0e1117';ctx.lineWidth=1.5;ctx.stroke();}
+    // dots
+    const lv2=lvSl[i];
     if(lv2){ctx.beginPath();ctx.arc(pxX(i,cw),pxY(lv2.c,lo,hi),4,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#0e1117';ctx.lineWidth=1.5;ctx.stroke();}
+    fcSls.forEach((sl,fi)=>{
+      const d=sl[i];if(!d)return;
+      ctx.beginPath();ctx.arc(pxX(i,cw),pxY(d.c,lo,hi),3,0,Math.PI*2);
+      ctx.fillStyle=FORECASTS[fi].color;ctx.fill();
+    });
+    // axis labels
     const hv=hi-(mouseY-PAD.T)/(H-PAD.T-PAD.B)*(hi-lo);
-    ctx.fillStyle='#2a2d3a'; ctx.strokeStyle='#444'; ctx.lineWidth=0.5;
-    ctx.beginPath(); ctx.rect(W-PAD.R+1,mouseY-9,PAD.R-3,18); ctx.fill(); ctx.stroke();
-    ctx.fillStyle='#d1d4dc'; ctx.font='10px monospace'; ctx.textAlign='left';
+    ctx.fillStyle='#2a2d3a';ctx.strokeStyle='#444';ctx.lineWidth=0.5;
+    ctx.beginPath();ctx.rect(W-PAD.R+1,mouseY-9,PAD.R-3,18);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#d1d4dc';ctx.font='10px monospace';ctx.textAlign='left';
     ctx.fillText((hv>=0?'+':'')+hv.toFixed(1),W-PAD.R+4,mouseY+4);
-    const lbl=(fc||lv2)?.label||'';
+    const lbl=(lv2||fcSls[0][i])?.label||'';
     if(lbl){
       const lw=ctx.measureText(lbl).width+10;
-      ctx.fillStyle='#2a2d3a'; ctx.strokeStyle='#444'; ctx.lineWidth=0.5;
-      ctx.beginPath(); ctx.rect(pxX(i,cw)-lw/2,H-PAD.B+2,lw,16); ctx.fill(); ctx.stroke();
-      ctx.fillStyle='#d1d4dc'; ctx.font='10px monospace'; ctx.textAlign='center';
+      ctx.fillStyle='#2a2d3a';ctx.strokeStyle='#444';ctx.lineWidth=0.5;
+      ctx.beginPath();ctx.rect(pxX(i,cw)-lw/2,H-PAD.B+2,lw,16);ctx.fill();ctx.stroke();
+      ctx.fillStyle='#d1d4dc';ctx.font='10px monospace';ctx.textAlign='center';
       ctx.fillText(lbl,pxX(i,cw),H-PAD.B+13);
     }
+    // tooltip
     const s=v=>(v>=0?'+':'')+v.toFixed(2);
     let html=`<b style="color:#888">${lbl}</b>`;
-    if(lv2)html+=`<br><span style="color:#fff">● Live:     ${s(lv2.c)}</span>`;
-    if(fc) html+=`<br><span style="color:#26a69a">- - Forecast: ${s(fc.c)}</span>`;
-    if(lv2&&fc){const diff=+(lv2.c-fc.c).toFixed(2);html+=`<br><span style="color:${Math.abs(diff)<15?'#26a69a':'#f0b429'}">Δ diff: ${s(diff)}</span>`;}
+    if(lv2)html+=`<br><span style="color:#fff">● Actual: ${s(lv2.c)}</span>`;
+    fcSls.forEach((sl,fi)=>{
+      const d=sl[i];if(!d)return;
+      const diff=lv2?+(lv2.c-d.c).toFixed(2):null;
+      html+=`<br><span style="color:${FORECASTS[fi].color}">- ${FORECASTS[fi].name}: ${s(d.c)}</span>`;
+      if(diff!==null)html+=`<span style="color:#555"> Δ${s(diff)}</span>`;
+    });
     tip.innerHTML=html;
-    tip.style.left=(mouseX+14+170>W?mouseX-190:mouseX+14)+'px';
-    tip.style.top=Math.max(0,mouseY-14)+'px'; tip.style.display='block';
-    document.getElementById('hover-info').innerHTML=
-      (lv2?`<span style="color:#fff">LV:${s(lv2.c)}</span>  `:'')+
-      (fc?`<span style="color:#26a69a">FC:${s(fc.c)}</span>`:'');
+    tip.style.left=(mouseX+14+200>W?mouseX-220:mouseX+14)+'px';
+    tip.style.top=Math.max(0,mouseY-14)+'px';tip.style.display='block';
+    if(lv2){
+      let hi2=`<span style="color:#fff">LV:${s(lv2.c)}</span>`;
+      fcSls.forEach((sl,fi)=>{const d=sl[i];if(d)hi2+=`  <span style="color:${FORECASTS[fi].color}">${FORECASTS[fi].name}:${s(d.c)}</span>`;});
+      document.getElementById('hover-info').innerHTML=hi2;
+    }
   }
 
   // last price pins
-  [[fcSl,'#26a69a'],[lvSl,'#fff']].forEach(([sl,col])=>{
+  [[lvSl,'#fff'],...fcSls.map((sl,i)=>[sl,FORECASTS[i].color])].forEach(([sl,col])=>{
     if(!sl||!sl.length)return;
     const last=sl[sl.length-1];
     const ly=pxY(last.c,lo,hi);
-    ctx.fillStyle=col; ctx.beginPath(); ctx.rect(W-PAD.R+1,ly-9,PAD.R-3,18); ctx.fill();
-    ctx.fillStyle='#000'; ctx.font='bold 9px monospace'; ctx.textAlign='left';
+    ctx.fillStyle=col;ctx.beginPath();ctx.rect(W-PAD.R+1,ly-9,PAD.R-3,18);ctx.fill();
+    ctx.fillStyle='#000';ctx.font='bold 9px monospace';ctx.textAlign='left';
     ctx.fillText((last.c>=0?'+':'')+last.c.toFixed(1),W-PAD.R+4,ly+4);
   });
 
-  // ACTUAL label on live line
-  if(lvSl.length>0){
-    const midI=Math.floor(lvSl.length/2);
-    const mx=pxX(midI,cw), my=pxY(lvSl[midI].c,lo,hi)-14;
-    ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.beginPath();
-    ctx.rect(mx-22,my-8,44,16); ctx.fill();
-    ctx.fillStyle='#fff'; ctx.font='bold 9px monospace'; ctx.textAlign='center';
-    ctx.fillText('ACTUAL',mx,my+4);
-  }
-
   // x-axis
-  ctx.fillStyle='#555'; ctx.font='10px monospace'; ctx.textAlign='center';
+  ctx.fillStyle='#555';ctx.font='10px monospace';ctx.textAlign='center';
   const maxL=Math.floor((W-PAD.L-PAD.R)/55);
   const step=Math.max(1,Math.floor(visCount/maxL));
-  const ref=fcData.length?fcData:lvData;
+  const ref=lvData.length?lvData:fcDataArr[0];
   ref.slice(startIdx,startIdx+visCount).forEach((d,i)=>{
     if(i%step===0)ctx.fillText(d.label,pxX(i,cw),H-PAD.B+14);
   });
@@ -653,20 +973,20 @@ function draw(){
 // INTERACTIONS
 // ============================================================
 cv.addEventListener('mousemove',e=>{
-  const r=cv.getBoundingClientRect(); mouseX=e.clientX-r.left; mouseY=e.clientY-r.top;
+  const r=cv.getBoundingClientRect();mouseX=e.clientX-r.left;mouseY=e.clientY-r.top;
   if(isDrag){
-    const max=Math.max(fcData.length,lvData.length);
+    const max=Math.max(lvData.length,...fcDataArr.map(f=>f.length));
     const cw=(W-PAD.L-PAD.R)/visCount;
     startIdx=Math.max(0,Math.min(max-visCount,dragIdx+Math.round(-(mouseX-dragX)/cw)));
   }
   draw();
 });
-cv.addEventListener('mouseleave',()=>{mouseX=-1;mouseY=-1;tip.style.display='none';draw();});
+cv.addEventListener('mouseleave',()=>{mouseX=-1;mouseY=-1;tip.style.display='none';document.getElementById('hover-info').textContent='';draw();});
 cv.addEventListener('mousedown',e=>{isDrag=true;dragX=e.clientX-cv.getBoundingClientRect().left;dragIdx=startIdx;cv.style.cursor='grabbing';});
 cv.addEventListener('mouseup',()=>{isDrag=false;cv.style.cursor='crosshair';});
 cv.addEventListener('wheel',e=>{
   e.preventDefault();
-  const max=Math.max(fcData.length,lvData.length);
+  const max=Math.max(lvData.length,...fcDataArr.map(f=>f.length));
   const mx=e.clientX-cv.getBoundingClientRect().left;
   const ratio=(mx-PAD.L)/(W-PAD.L-PAD.R),old=visCount;
   const step=Math.max(5,Math.floor(visCount*0.12));
@@ -681,7 +1001,7 @@ cv.addEventListener('touchstart',e=>{
   e.preventDefault();
 },{passive:false});
 cv.addEventListener('touchmove',e=>{
-  const max=Math.max(fcData.length,lvData.length);
+  const max=Math.max(lvData.length,...fcDataArr.map(f=>f.length));
   if(e.touches.length===1&&isDrag){
     const cw=(W-PAD.L-PAD.R)/visCount;
     startIdx=Math.max(0,Math.min(max-visCount,dragIdx+Math.round(-(e.touches[0].clientX-lTX)/cw)));draw();
@@ -695,13 +1015,13 @@ cv.addEventListener('touchmove',e=>{
 },{passive:false});
 cv.addEventListener('touchend',()=>{isDrag=false;});
 window.addEventListener('keydown',e=>{
-  const max=Math.max(fcData.length,lvData.length);
+  const max=Math.max(lvData.length,...fcDataArr.map(f=>f.length));
   const s=Math.max(1,Math.floor(visCount*0.1));
   if(e.key==='ArrowLeft'){startIdx=Math.max(0,startIdx-s);draw();}
   if(e.key==='ArrowRight'){startIdx=Math.min(max-visCount,startIdx+s);draw();}
-  if(e.key==='+'||e.key==='=')zoom(-1);
-  if(e.key==='-')zoom(1);
-  if(e.key==='f'||e.key==='F')fitAll();
+  if(e.key==='+'||e.key==='=')window.zoom(-1);
+  if(e.key==='-')window.zoom(1);
+  if(e.key==='f'||e.key==='F')window.fitAll();
 });
 window.addEventListener('resize',resize);
 </script>
