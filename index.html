@@ -1,91 +1,252 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Market Forecast Platform</title>
-
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <style>
-    body {
-      margin: 0;
-      height: 100vh;
-      background: radial-gradient(circle at top, #111827, #020617);
-      color: #e5e7eb;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .container {
-      text-align: center;
-      max-width: 600px;
-    }
-
-    h1 {
-      font-size: 32px;
-      margin-bottom: 10px;
-    }
-
-    p {
-      font-size: 14px;
-      opacity: 0.8;
-      margin-bottom: 40px;
-    }
-
-    .buttons {
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-      flex-wrap: wrap;
-    }
-
-    .btn {
-      padding: 16px 28px;
-      font-size: 16px;
-      border-radius: 10px;
-      border: none;
-      cursor: pointer;
-      background: #2563eb;
-      color: white;
-      text-decoration: none;
-    }
-
-    .btn:hover {
-      background: #1d4ed8;
-    }
-
-    footer {
-      position: fixed;
-      bottom: 10px;
-      width: 100%;
-      text-align: center;
-      font-size: 10px;
-      opacity: 0.5;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nifty 50 Forecast</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:#0e1117; color:#d1d4dc; font-family:monospace; min-height:100vh; }
+  nav { display:flex; align-items:center; justify-content:space-between; padding:12px 24px; background:#131722; border-bottom:1px solid #1e222d; }
+  .nav-logo { font-size:14px; font-weight:700; color:#fff; }
+  .nav-btn { font-size:11px; padding:5px 14px; background:#26a69a22; color:#26a69a; border:1px solid #26a69a66; border-radius:4px; cursor:pointer; font-family:monospace; text-decoration:none; }
+  #hero { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 20px 40px; text-align:center; gap:16px; }
+  .badge { font-size:10px; padding:3px 12px; background:#26a69a22; color:#26a69a; border:1px solid #26a69a44; border-radius:20px; }
+  h1 { font-size:26px; color:#fff; font-weight:700; line-height:1.3; max-width:600px; }
+  h1 span { color:#26a69a; }
+  .subtitle { font-size:12px; color:#555; max-width:480px; line-height:1.7; }
+  .stats { display:flex; gap:24px; flex-wrap:wrap; justify-content:center; margin:10px 0; }
+  .stat { display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .stat-val { font-size:22px; font-weight:700; color:#26a69a; }
+  .stat-lbl { font-size:10px; color:#555; }
+  #login-card { background:#131722; border:1px solid #1e222d; border-radius:12px; padding:28px 32px; width:100%; max-width:360px; margin:0 auto; display:flex; flex-direction:column; gap:12px; }
+  #login-card h2 { font-size:14px; color:#fff; text-align:center; }
+  #login-card p { font-size:11px; color:#555; text-align:center; }
+  .inp { width:100%; padding:9px 12px; background:#0e1117; border:1px solid #363a45; border-radius:5px; color:#d1d4dc; font-family:monospace; font-size:12px; outline:none; }
+  .inp:focus { border-color:#26a69a66; }
+  .btn-primary { width:100%; padding:10px; background:#26a69a; color:#000; border:none; border-radius:5px; cursor:pointer; font-family:monospace; font-size:12px; font-weight:700; }
+  .btn-google { width:100%; padding:10px; background:#2a2d3a; color:#d1d4dc; border:1px solid #363a45; border-radius:5px; cursor:pointer; font-family:monospace; font-size:12px; display:flex; align-items:center; justify-content:center; gap:8px; }
+  .divider { display:flex; align-items:center; gap:10px; font-size:10px; color:#363a45; }
+  .divider::before,.divider::after { content:''; flex:1; height:1px; background:#1e222d; }
+  .err { font-size:11px; color:#ef5350; display:none; text-align:center; }
+  .lnk { font-size:10px; color:#26a69a; cursor:pointer; text-align:center; }
+  #features { padding:40px 20px; max-width:900px; margin:0 auto; }
+  .sec-title { font-size:11px; color:#555; text-align:center; margin-bottom:20px; text-transform:uppercase; letter-spacing:1px; }
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .card { background:#131722; border:1px solid #1e222d; border-radius:8px; padding:18px 14px; }
+  .card-icon { font-size:22px; margin-bottom:8px; }
+  .card-title { font-size:12px; color:#fff; margin-bottom:5px; }
+  .card-desc { font-size:10px; color:#555; line-height:1.6; }
+  #pricing { padding:30px 20px; max-width:700px; margin:0 auto; }
+  .grid2 { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+  .plan { background:#131722; border:1px solid #1e222d; border-radius:10px; padding:22px 18px; display:flex; flex-direction:column; gap:10px; }
+  .plan.pop { border-color:#26a69a66; }
+  .plan-badge { font-size:9px; padding:2px 8px; background:#26a69a22; color:#26a69a; border:1px solid #26a69a44; border-radius:3px; width:fit-content; }
+  .plan-name { font-size:14px; color:#fff; font-weight:700; }
+  .plan-price { font-size:22px; color:#26a69a; font-weight:700; }
+  .plan-price span { font-size:11px; color:#555; }
+  .plan-feats { list-style:none; display:flex; flex-direction:column; gap:5px; }
+  .plan-feats li { font-size:11px; color:#555; }
+  .plan-feats li::before { content:'✓ '; color:#26a69a; }
+  .plan-btn { padding:8px; border-radius:5px; cursor:pointer; font-family:monospace; font-size:11px; text-align:center; border:1px solid #26a69a66; background:#26a69a22; color:#26a69a; }
+  #preview-wrap { padding:20px; max-width:900px; margin:0 auto 30px; }
+  #preview-chart { background:#131722; border:1px solid #1e222d; border-radius:10px; overflow:hidden; position:relative; }
+  .preview-blur { position:absolute; bottom:0; left:0; width:100%; height:60%; background:linear-gradient(transparent,#131722); display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding-bottom:16px; gap:8px; }
+  .preview-blur p { font-size:12px; color:#555; }
+  .unlock-btn { padding:7px 22px; background:#26a69a; color:#000; border:none; border-radius:5px; cursor:pointer; font-family:monospace; font-size:12px; font-weight:700; }
+  #user-bar { display:none; align-items:center; justify-content:space-between; padding:8px 24px; background:#131722; border-bottom:1px solid #1e222d; font-size:11px; }
+  .go-btn { padding:5px 14px; background:#26a69a; color:#000; border:none; border-radius:4px; cursor:pointer; font-family:monospace; font-size:11px; font-weight:700; margin-left:8px; }
+  .out-btn { padding:5px 12px; background:#2a2d3a; color:#888; border:1px solid #363a45; border-radius:4px; cursor:pointer; font-family:monospace; font-size:10px; }
+  footer { text-align:center; padding:20px; font-size:10px; color:#363a45; border-top:1px solid #1e222d; margin-top:20px; }
+  @media(max-width:600px){ h1{font-size:20px;} .grid3,.grid2{grid-template-columns:1fr;} #login-card{padding:18px;} }
+</style>
 </head>
-
 <body>
 
-  <div class="container">
-    <h1>Visual Market Forecasts</h1>
+<div id="user-bar">
+  <span>Welcome, <span id="u-email" style="color:#26a69a"></span></span>
+  <div>
+    <button class="go-btn" onclick="location.href='dashboard.html'">Dashboard →</button>
+    <button class="out-btn" onclick="doLogout()">Logout</button>
+  </div>
+</div>
 
-    <p>
-      Experimental forecast structures for interpretation.<br>
-      Not signals. Not advice.
-    </p>
+<nav>
+  <span class="nav-logo">📈 Nifty Forecast</span>
+  <a class="nav-btn" href="#login-card">Login</a>
+</nav>
 
-    <div class="buttons">
-      <a class="btn" href="dashboard.html">🇮🇳 India Markets</a>
-      <a class="btn" href="USASP500newrealtime.html">🇺🇸 USA Markets</a>
-    </div>
+<div id="hero">
+  <div class="badge">● Live during market hours 9:15–15:30 IST</div>
+  <h1>Nifty 50 Forecast<br><span>vs Actual — Real Time</span></h1>
+  <p class="subtitle">Daily intraday forecast with 30 automatic accuracy metrics. Updated every minute. Direction, correlation, time shift and more.</p>
+  <div class="stats">
+    <div class="stat"><span class="stat-val">375</span><span class="stat-lbl">Forecast bars</span></div>
+    <div class="stat"><span class="stat-val">30</span><span class="stat-lbl">Accuracy metrics</span></div>
+    <div class="stat"><span class="stat-val">1m</span><span class="stat-lbl">Refresh rate</span></div>
+    <div class="stat"><span class="stat-val">74%</span><span class="stat-lbl">Avg correlation</span></div>
   </div>
 
-  <footer>
-    Educational use only · No financial advice
-  </footer>
+  <div id="login-card">
+    <h2>Access Dashboard</h2>
+    <p>Login to view live forecast</p>
+    <button class="btn-google" onclick="doGoogle()"><span style="font-weight:700;color:#4285f4">G</span> Continue with Google</button>
+    <div class="divider">or</div>
+    <input class="inp" type="email" id="em" placeholder="Email address">
+    <input class="inp" type="password" id="pw" placeholder="Password">
+    <div class="err" id="err"></div>
+    <button class="btn-primary" onclick="doEmail()">Login</button>
+    <div class="lnk" onclick="requestAccess()">New user? Request access</div>
+    <div style="font-size:9px;color:#363a45;text-align:center;">Educational only · Not investment advice</div>
+  </div>
+</div>
 
+<div id="preview-wrap">
+  <div class="sec-title">Free preview — first 30 bars only</div>
+  <div id="preview-chart">
+    <canvas id="pcv" height="180"></canvas>
+    <div class="preview-blur">
+      <p>Login to see full 375-bar forecast + all metrics</p>
+      <button class="unlock-btn" onclick="document.getElementById('em').focus()">Unlock Full Access</button>
+    </div>
+  </div>
+</div>
+
+<div id="features">
+  <div class="sec-title">What you get</div>
+  <div class="grid3">
+    <div class="card"><div class="card-icon">📈</div><div class="card-title">Live vs Forecast</div><div class="card-desc">Both lines on same chart. Zero-based from open. Updates every minute.</div></div>
+    <div class="card"><div class="card-icon">🎯</div><div class="card-title">30 Accuracy Metrics</div><div class="card-desc">Correlation, direction, time shift, best window, streak and more.</div></div>
+    <div class="card"><div class="card-icon">⏱️</div><div class="card-title">Time Shift Detection</div><div class="card-desc">Know if forecast is running early or late. Adjust timing accordingly.</div></div>
+    <div class="card"><div class="card-icon">🏆</div><div class="card-title">Multi-Model Compare</div><div class="card-desc">Compare multiple models. Auto ranking. See which wins today.</div></div>
+    <div class="card"><div class="card-icon">🔴</div><div class="card-title">Live Streak Counter</div><div class="card-desc">Consecutive correct direction minutes. Best window of the day.</div></div>
+    <div class="card"><div class="card-icon">📊</div><div class="card-title">API Access</div><div class="card-desc">375 points + all 30 metrics as JSON. Build your own tools.</div></div>
+  </div>
+</div>
+
+<div id="pricing">
+  <div class="sec-title">Plans</div>
+  <div class="grid2">
+    <div class="plan">
+      <div class="plan-name">Basic</div>
+      <div class="plan-price">₹999 <span>/month</span></div>
+      <ul class="plan-feats">
+        <li>375-bar daily forecast</li>
+        <li>Live vs actual chart</li>
+        <li>30 accuracy metrics</li>
+        <li>1m to 30m timeframes</li>
+        <li>Telegram updates</li>
+      </ul>
+      <div class="plan-btn" onclick="document.getElementById('em').focus()">Get Started</div>
+    </div>
+    <div class="plan pop">
+      <div class="plan-badge">Most Popular</div>
+      <div class="plan-name">Premium</div>
+      <div class="plan-price">₹2,499 <span>/month</span></div>
+      <ul class="plan-feats">
+        <li>Everything in Basic</li>
+        <li>Multi-model comparison</li>
+        <li>S&P 500 forecast</li>
+        <li>API access (JSON)</li>
+        <li>Time shift alerts</li>
+        <li>Historical accuracy</li>
+      </ul>
+      <div class="plan-btn" onclick="document.getElementById('em').focus()">Get Premium</div>
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:14px;font-size:10px;color:#363a45;">Pay via UPI · Month to month · Cancel anytime · your@email.com</div>
+</div>
+
+<footer>Educational forecast tool only. Not investment advice. Past accuracy does not guarantee future results. Not SEBI registered.<br><br>© 2026 Nifty Forecast</footer>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+// ── YOUR FIREBASE CONFIG ──
+const FB = {
+    apiKey: "AIzaSyA22RcIFt5vPfhSUoKMFl1ja6MCXKxv06k",
+    authDomain: "huntorfarm.firebaseapp.com",
+    projectId: "huntorfarm",
+    storageBucket: "huntorfarm.appspot.com",
+    messagingSenderId: "568472349794",
+    appId: "1:568472349794:web:d753d6976166b968ce753b"
+  };
+
+// ── SUBSCRIBERS — add email when paid, remove when cancelled ──
+const SUBS = [
+  'craydevc@email.com',
+  // 'subscriber1@gmail.com',
+];
+
+const app  = initializeApp(FB);
+const auth = getAuth(app);
+const gp   = new GoogleAuthProvider();
+
+onAuthStateChanged(auth, user => {
+  if (!user) return;
+  document.getElementById('user-bar').style.display = 'flex';
+  document.getElementById('u-email').textContent = user.email;
+  if (SUBS.includes(user.email.toLowerCase())) {
+    location.href = 'dashboard.html';
+  }
+});
+
+window.doEmail = async () => {
+  const em=document.getElementById('em').value.trim();
+  const pw=document.getElementById('pw').value;
+  const er=document.getElementById('err');
+  if(!em||!pw){er.textContent='Enter email and password';er.style.display='block';return;}
+  try{er.style.display='none';await signInWithEmailAndPassword(auth,em,pw);}
+  catch(e){er.textContent=errMsg(e.code);er.style.display='block';}
+};
+
+window.doGoogle = async () => {
+  try { await signInWithPopup(auth, gp); }
+  catch(e) { document.getElementById('err').textContent='Google login failed';document.getElementById('err').style.display='block'; }
+};
+
+window.doLogout = async () => {
+  await signOut(auth);
+  document.getElementById('user-bar').style.display='none';
+};
+
+window.requestAccess = () => alert('Contact your@email.com\nUPI payment details will be shared.\n₹999/month Basic · ₹2499/month Premium');
+
+function errMsg(c){
+  return {'auth/user-not-found':'Email not registered. Contact us.','auth/wrong-password':'Wrong password.','auth/invalid-credential':'Wrong email or password.','auth/too-many-requests':'Too many attempts. Try later.'}[c]||'Login failed. Try again.';
+}
+
+// ── FREE PREVIEW CHART ──
+const SAMPLE=[0,-24.25,-23.90,-6.10,-7.60,-1.85,8.10,5.60,4.20,19.65,29.30,23.30,20.05,9.30,9.70,10.05,-6.50,-3.80,-0.90,5.35,2.95,-2.55,9.95,4.35,8.05,-4.05,-5.00,2.15,6.30,4.20];
+
+function drawPreview(){
+  const cv=document.getElementById('pcv');
+  const ctx=cv.getContext('2d');
+  cv.width=cv.parentElement.clientWidth;
+  const W=cv.width,H=cv.height;
+  ctx.fillStyle='#131722';ctx.fillRect(0,0,W,H);
+  const P={L:10,R:10,T:16,B:20};
+  const cw=(W-P.L-P.R)/SAMPLE.length;
+  const lo=Math.min(...SAMPLE)-3,hi=Math.max(...SAMPLE)+3;
+  const pY=v=>P.T+(1-(v-lo)/(hi-lo))*(H-P.T-P.B);
+  const pX=i=>P.L+i*cw+cw/2;
+  const zy=pY(0);
+  ctx.strokeStyle='rgba(200,200,200,0.2)';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(P.L,zy);ctx.lineTo(W-P.R,zy);ctx.stroke();ctx.setLineDash([]);
+  const g=ctx.createLinearGradient(0,P.T,0,H-P.B);
+  g.addColorStop(0,'rgba(38,166,154,0.25)');g.addColorStop(1,'rgba(38,166,154,0)');
+  ctx.beginPath();
+  SAMPLE.forEach((v,i)=>{const x=pX(i),y=pY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.lineTo(pX(SAMPLE.length-1),zy);ctx.lineTo(pX(0),zy);
+  ctx.closePath();ctx.fillStyle=g;ctx.fill();
+  ctx.strokeStyle='#26a69a';ctx.lineWidth=2;ctx.lineJoin='round';
+  ctx.beginPath();
+  SAMPLE.forEach((v,i)=>{const x=pX(i),y=pY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.stroke();
+}
+window.addEventListener('load',drawPreview);
+window.addEventListener('resize',drawPreview);
+</script>
 </body>
 </html>
