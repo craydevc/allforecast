@@ -36,7 +36,7 @@
   .pre-inp:focus { border-color:#26a69a66; }
 
   /* ── CHART ── */
-  #chart-area { position:relative; height:340px; flex-shrink:0; margin-bottom:6px; }
+  #chart-area { position:relative; height:calc(100vh - 96px); min-height:400px; flex-shrink:0; margin-bottom:6px; }
   canvas { display:block; cursor:crosshair; }
   #tooltip { position:absolute; pointer-events:none; background:rgba(19,23,34,0.96); border:1px solid #363a45; border-radius:5px; padding:6px 10px; font-size:11px; line-height:1.8; display:none; white-space:nowrap; z-index:10; }
 
@@ -50,7 +50,7 @@
   .sim-sub { font-size:9px; color:#555; }
 
   /* ── COMPARISON TABLE ── */
-  #analysis { flex:1; overflow-y:auto; background:#131722; border-radius:8px; border:1px solid #1e222d; padding:8px; }
+  #analysis { background:#131722; border-radius:8px; border:1px solid #1e222d; padding:8px; }
   .tbl-title { font-size:9px; color:#555; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
   table { width:100%; border-collapse:collapse; font-size:11px; }
   th { background:#0e1117; color:#555; font-size:9px; text-transform:uppercase; letter-spacing:0.5px; padding:5px 8px; text-align:center; border-bottom:1px solid #1e222d; position:sticky; top:0; z-index:5; }
@@ -82,7 +82,7 @@
   .em-btn { padding:8px; background:#2a2d3a; color:#888; border:1px solid #363a45; border-radius:5px; text-align:center; text-decoration:none; font-size:11px; }
 
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-  @media(max-width:600px) { #sim-panel{grid-template-columns:repeat(2,1fr);} #chart-area{height:260px;} }
+  @media(max-width:600px) { #sim-panel{grid-template-columns:repeat(2,1fr);} #chart-area{height:calc(100vh - 160px); min-height:320px;} }
 </style>
 </head>
 <body>
@@ -143,6 +143,7 @@
   <div class="sep"></div>
   <button class="btn active" id="btn-ma20" onclick="toggleMA(20)">MA20</button>
   <button class="btn active" id="btn-ma50" onclick="toggleMA(50)">MA50</button>
+  <button class="btn active" id="btn-bb" onclick="toggleBB()">BB</button>
   <div class="sep"></div>
   <button class="btn" onclick="zoom(-1)">＋</button>
   <button class="btn" onclick="zoom(1)">－</button>
@@ -715,10 +716,11 @@ const PROXIES=[
   u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
 ];
 const mas={20:{active:true,color:'#f0b429'},50:{active:true,color:'#e040fb'}};
+let bbActive=true;
 
 let liveData=[],liveRaw=[],currentTF=1,dataSource='live';
 let PRE_OPEN=null,refreshTimer,countdownTimer,cdVal=60;
-let lvData=[],fcDataArr=[],lvMA20=[],lvMA50=[];
+let lvData=[],fcDataArr=[],lvMA20=[],lvMA50=[],lvBB=[],fcMA20Arr=[],fcMA50Arr=[],fcBBArr=[];
 let startIdx=0,visCount=0;
 let isDrag=false,dragX=0,dragIdx=0;
 let mouseX=-1,mouseY=-1,W,H;
@@ -826,11 +828,24 @@ function resample(arr,tf){
   return bars;
 }
 function calcMA(arr,p){return arr.map((_,i)=>{if(i<p-1)return null;return +(arr.slice(i-p+1,i+1).reduce((a,b)=>a+b.c,0)/p).toFixed(2);});}
+function calcBB(arr,p,mult){
+  return arr.map((_,i)=>{
+    if(i<p-1)return null;
+    const w=arr.slice(i-p+1,i+1).map(d=>d.c);
+    const mean=w.reduce((a,b)=>a+b,0)/p;
+    const variance=w.reduce((a,b)=>a+Math.pow(b-mean,2),0)/p;
+    const sd=Math.sqrt(variance);
+    return {mid:+mean.toFixed(2),up:+(mean+mult*sd).toFixed(2),lo:+(mean-mult*sd).toFixed(2)};
+  });
+}
 
 function buildAll(){
   lvData=resample(liveData,currentTF);
   fcDataArr=FORECASTS.map(f=>resample(f.data,currentTF));
-  lvMA20=calcMA(lvData,20);lvMA50=calcMA(lvData,50);
+  lvMA20=calcMA(lvData,20);lvMA50=calcMA(lvData,50);lvBB=calcBB(lvData,20,2);
+  fcMA20Arr=fcDataArr.map(fc=>calcMA(fc,20));
+  fcMA50Arr=fcDataArr.map(fc=>calcMA(fc,50));
+  fcBBArr=fcDataArr.map(fc=>calcBB(fc,20,2));
   const max=Math.max(lvData.length,...fcDataArr.map(f=>f.length));
   visCount=max;startIdx=0;
   document.getElementById('bar-count').textContent=`LV:${lvData.length} · ${currentTF}m`;
@@ -1089,6 +1104,11 @@ window.toggleMA=function(p){
   document.getElementById('btn-ma'+p).classList.toggle('active',mas[p].active);
   draw();
 };
+window.toggleBB=function(){
+  bbActive=!bbActive;
+  document.getElementById('btn-bb').classList.toggle('active',bbActive);
+  draw();
+};
 
 function draw(){
   ctx.clearRect(0,0,W,H);ctx.fillStyle='#131722';ctx.fillRect(0,0,W,H);
@@ -1125,12 +1145,40 @@ function draw(){
   fcSls.forEach((sl,fi)=>{
     if(!sl.length)return;
     const col=FORECASTS[fi].color;
+    // Bollinger Band for this forecast (drawn first, so line sits on top)
+    if(bbActive&&fcBBArr[fi]){
+      ctx.beginPath();let started=false;const upPts=[],loPts=[];
+      sl.forEach((_,i)=>{
+        const b=fcBBArr[fi][startIdx+i];if(!b)return;
+        upPts.push([pxX(i,cw),pxY(b.up,lo,hi)]);
+        loPts.push([pxX(i,cw),pxY(b.lo,lo,hi)]);
+      });
+      if(upPts.length>1){
+        ctx.beginPath();
+        upPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));
+        for(let i=loPts.length-1;i>=0;i--)ctx.lineTo(loPts[i][0],loPts[i][1]);
+        ctx.closePath();ctx.fillStyle=col+'14';ctx.fill(); // ~8% opacity fill
+        ctx.strokeStyle=col+'55';ctx.lineWidth=0.75;ctx.setLineDash([1,2]);
+        ctx.beginPath();upPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();
+        ctx.beginPath();loPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
     ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.lineJoin='round';ctx.setLineDash([6,3]);
     ctx.beginPath();
     sl.forEach((d,i)=>{const x=pxX(i,cw),y=pxY(d.c,lo,hi);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
     ctx.stroke();ctx.setLineDash([]);
-    // MA for each forecast (very subtle)
-    // skipped to keep chart clean
+    // MA for each forecast (subtle)
+    [[fcMA20Arr[fi],mas[20]],[fcMA50Arr[fi],mas[50]]].forEach(([arr,cfg])=>{
+      if(!cfg.active||!arr)return;
+      ctx.strokeStyle=col;ctx.lineWidth=0.75;ctx.lineJoin='round';ctx.setLineDash([2,2]);ctx.globalAlpha=0.55;
+      ctx.beginPath();let first=true;
+      sl.forEach((_,i)=>{
+        const m=arr[startIdx+i];if(m===null||m===undefined)return;
+        const x=pxX(i,cw),y=pxY(m,lo,hi);
+        if(first){ctx.moveTo(x,y);first=false;}else ctx.lineTo(x,y);
+      });ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
+    });
   });
 
   // live line (white, solid, thick)
@@ -1149,6 +1197,25 @@ function draw(){
     ctx.beginPath();
     lvSl.forEach((d,i)=>{const x=pxX(i,cw),y=pxY(d.c,lo,hi);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
     ctx.stroke();
+    // Bollinger Band on live
+    if(bbActive&&lvBB.length){
+      const upPts=[],loPts=[];
+      lvSl.forEach((_,i)=>{
+        const b=lvBB[startIdx+i];if(!b)return;
+        upPts.push([pxX(i,cw),pxY(b.up,lo,hi)]);
+        loPts.push([pxX(i,cw),pxY(b.lo,lo,hi)]);
+      });
+      if(upPts.length>1){
+        ctx.beginPath();
+        upPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));
+        for(let i=loPts.length-1;i>=0;i--)ctx.lineTo(loPts[i][0],loPts[i][1]);
+        ctx.closePath();ctx.fillStyle='#ffffff10';ctx.fill();
+        ctx.strokeStyle='#ffffff40';ctx.lineWidth=0.75;ctx.setLineDash([1,2]);
+        ctx.beginPath();upPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();
+        ctx.beginPath();loPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
     // MA on live
     [[lvMA20,mas[20]],[lvMA50,mas[50]]].forEach(([arr,cfg])=>{
       if(!cfg.active)return;
