@@ -1442,11 +1442,19 @@ function runRangeAnalysis(){
     }
     const shiftedCorr=r2p(bestR);
     const shiftLabel=bestS===0?'in sync':bestS>0?`+${bestS}m lead`:`${bestS}m lag`;
+    // direction accuracy AT the best shift (fair test: does forecast[i] call the direction actual takes 'bestS' minutes later?)
+    let sLa,sFb;
+    if(bestS>=0){sLa=a2.slice(bestS,n);sFb=b2.slice(0,n-bestS);}else{sLa=a2.slice(0,n+bestS);sFb=b2.slice(-bestS,n);}
+    let sdT=0,sdM=0;
+    for(let i=1;i<sLa.length;i++){const ld=sLa[i]-sLa[i-1],fd=sFb[i]-sFb[i-1];sdT++;if((ld>=0&&fd>=0)||(ld<0&&fd<0))sdM++;}
+    const shiftedDirAcc=sdT?Math.round(sdM/sdT*100):0;
     const col=corr>=70?'#26a69a':corr>=50?'#f0b429':'#ef5350';
+    const sdCol=shiftedDirAcc>=60?'#26a69a':shiftedDirAcc>=50?'#f0b429':'#ef5350';
     rows+=`<div class="rr-model"><b style="color:${f.color}">${f.name}</b><br>
       <span class="rr-metric">Corr: <b style="color:${col}">${corr}%</b></span>
-      <span class="rr-metric">Direction: <b>${dirAcc}%</b></span>
-      <span class="rr-metric">Best shift: <b>${shiftLabel}</b> (${shiftedCorr}%)</span></div>`;
+      <span class="rr-metric">Direction @0: <b>${dirAcc}%</b></span>
+      <span class="rr-metric">Best shift: <b>${shiftLabel}</b> (${shiftedCorr}%)</span><br>
+      <span class="rr-metric">Direction @shift: <b style="color:${sdCol}">${shiftedDirAcc}%</b></span></div>`;
   });
   const panel=document.getElementById('range-result');
   panel.style.display='block';
