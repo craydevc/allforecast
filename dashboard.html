@@ -87,7 +87,9 @@
   @keyframes sigPulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
   #btn-selrange.active { background:#2962ff; color:#fff; }
   #btn-shiftalign.active { background:#7c4dff; color:#fff; }
+  #btn-offsetalign.active { background:#00bcd4; color:#0e1117; }
   #shift-banner { display:none; background:#7c4dff; color:#fff; font-size:10px; padding:3px 10px; text-align:center; border-radius:5px; margin-bottom:4px; }
+  #offset-banner { display:none; background:#00bcd4; color:#0e1117; font-size:10px; padding:3px 10px; text-align:center; border-radius:5px; margin-bottom:4px; }
   #range-result { flex-shrink:0; margin-bottom:6px; background:#131722; border:1px solid #2962ff; border-radius:7px; padding:8px 12px; font-size:11px; color:#d1d4dc; }
   #range-result .rr-title { color:#888; font-size:10px; margin-bottom:6px; display:flex; justify-content:space-between; }
   #range-result .rr-close { cursor:pointer; color:#888; }
@@ -136,7 +138,7 @@
 <div id="main" style="display:none;flex-direction:column;flex:1;">
 
 <div id="topbar">
-  <h1>📈 Nifty 50 — Live vs Forecast: 07 Aug 2026- Friday : NSE India Spot Index, software updated on 8th aug </h1>
+  <h1>📈 Nifty 50 — Live vs Forecast: 07 Aug 2026- Friday : NSE India Spot Index </h1>
   <span id="status">Loading...</span>
   <div id="userbar">
     <span id="u-email"></span>
@@ -172,12 +174,14 @@
   <button class="btn" id="btn-sound" onclick="toggleSound()">🔕 Sound Off</button>
   <button class="btn" id="btn-selrange" onclick="toggleSelMode()">🔍 Select Range</button>
   <button class="btn" id="btn-shiftalign" onclick="toggleShiftAlign()" title="Nudges each model's line forward/back in time to overlay Actual — for shape comparison only, not a live prediction">🧲 Shift-Align</button>
+  <button class="btn" id="btn-offsetalign" onclick="toggleOffsetAlign()" title="Re-centers each model's level to match Actual's starting point — checks if the WAVE RHYTHM matches once the vertical gap is removed">↕ Offset-Align</button>
   <div class="sep"></div>
   <span id="hover-info"></span>
 </div>
 
 <div id="chart-area">
   <div id="shift-banner">🧲 Shift-Aligned View — model lines nudged in TIME only (to their best-fit lead/lag) to overlay Actual for shape comparison. Not a live prediction — magnitude/error still shown true.</div>
+  <div id="offset-banner">↕ Offset-Aligned View — each model's LEVEL re-centered to Actual's current starting point, to check if the wave rhythm matches once the vertical gap is ignored. Real level/error still shown in the metrics table, not here.</div>
   <canvas id="cv"></canvas>
   <div id="tooltip"></div>
 </div>
@@ -210,7 +214,7 @@
     <div class="sim-sub" id="sub-shift">offset</div>
   </div>
   <div class="sim-box" style="border:1px solid #333">
-    <div class="sim-label">🔔 Live Signal</div>
+    <div class="sim-label">🔔 Close to Forecast</div>
     <div class="sim-val" id="sim-signal" style="color:#555;font-size:14px">--</div>
     <div class="sim-bar-bg"><div class="sim-bar-fill" id="bar-signal" style="width:0%"></div></div>
     <div class="sim-sub" id="sub-signal">waiting...</div>
@@ -1121,11 +1125,17 @@ let PRE_OPEN=null,refreshTimer,countdownTimer,cdVal=60;
 let lvData=[],fcDataArr=[],lvMA20=[],lvMA50=[],lvBB=[],fcMA20Arr=[],fcMA50Arr=[],fcBBArr=[];
 let startIdx=0,visCount=0;
 let selMode=false,selDragging=false,selStartBar=null,selEndBar=null;
-let shiftAlignMode=false;
+let shiftAlignMode=false,offsetAlignMode=false;
 window.toggleShiftAlign=function(){
   shiftAlignMode=!shiftAlignMode;
   document.getElementById('btn-shiftalign').classList.toggle('active',shiftAlignMode);
   document.getElementById('shift-banner').style.display=shiftAlignMode?'block':'none';
+  draw();
+};
+window.toggleOffsetAlign=function(){
+  offsetAlignMode=!offsetAlignMode;
+  document.getElementById('btn-offsetalign').classList.toggle('active',offsetAlignMode);
+  document.getElementById('offset-banner').style.display=offsetAlignMode?'block':'none';
   draw();
 };
 let isDrag=false,dragX=0,dragIdx=0;
@@ -1168,16 +1178,18 @@ async function tryFetch(url){
   for(let i=0;i<PROXIES.length;i++){
     try{
       setStatus(`⏳ Trying ${i+1}/${PROXIES.length}...`);
-      const res=await fetch(PROXIES[i](url+'&nc='+Date.now()),{mode:'cors'});
+      const res=await fetch(PROXIES[i](url+'&nc='+Date.now()),{mode:'cors',cache:'no-store'});
       if(!res.ok)throw new Error('HTTP '+res.status);
       const txt=await res.text();
       const json=JSON.parse(txt);
       const data=json.contents?JSON.parse(json.contents):json;
       const closes=data?.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
+      const timestamps=data?.chart?.result?.[0]?.timestamp; // unix seconds per bar, straight from Yahoo
       if(!closes||closes.length<2)throw new Error('no data');
-      const clean=closes.filter(v=>v!=null&&!isNaN(v));
-      if(clean.length<2)throw new Error('empty');
-      return clean;
+      const cleanC=[],cleanT=[];
+      closes.forEach((v,idx)=>{if(v!=null&&!isNaN(v)){cleanC.push(v);cleanT.push(timestamps?timestamps[idx]:null);}});
+      if(cleanC.length<2)throw new Error('empty');
+      return{closes:cleanC,timestamps:cleanT};
     }catch(e){console.warn(`Proxy ${i+1}:`,e.message);}
   }
   return null;
@@ -1189,12 +1201,22 @@ async function fetchAndUpdate(){
     setStatus(`📋 Test · ${TEST_LIVE.length} bars`);
     buildAll();calcAllSim();renderTable();draw();return;
   }
-  const raw=await tryFetch(YAHOO);
-  if(raw&&raw.length>1){
+  const result=await tryFetch(YAHOO);
+  if(result&&result.closes.length>1){
+    const raw=result.closes;
     liveRaw=raw;
     const base=PRE_OPEN||raw[0];
     liveData=raw.map(v=>+(v-base).toFixed(2));
-    setStatus(`<span style="color:#ef5350;animation:pulse 1.5s infinite;display:inline-block">●</span> Live · ${liveData.length} bars · <span id="cd">${cdVal}</span>s`);
+    // freshness check: compare the LAST bar's own timestamp (from Yahoo) against wall-clock now.
+    // This catches genuine source-side delay (Yahoo's free NSE feed is often delayed by design),
+    // which looks identical to "stale cache" but isn't fixable by cache-busting — worth knowing which it is.
+    const lastTs=result.timestamps[result.timestamps.length-1];
+    let freshTxt='';
+    if(lastTs){
+      const ageMin=Math.round((Date.now()/1000-lastTs)/60);
+      if(ageMin>=3){freshTxt=` · <span style="color:#f0b429">⚠️ last bar is ~${ageMin}m old (source delay, not cache)</span>`;}
+    }
+    setStatus(`<span style="color:#ef5350;animation:pulse 1.5s infinite;display:inline-block">●</span> Live · ${liveData.length} bars · <span id="cd">${cdVal}</span>s${freshTxt}`);
     document.getElementById('last-update').textContent='Updated: '+new Date().toLocaleTimeString('en-IN');
   }else{
     if(liveData.length===0){liveData=TEST_LIVE;setStatus('⚠️ Yahoo failed · test data');}
@@ -1673,15 +1695,31 @@ function draw(){
   const cw=(W-PAD.L-PAD.R)/visCount;
   const lvSl=lvData.slice(startIdx,startIdx+visCount);
   const fcSls=fcDataArr.map((f,fi)=>{
-    if(!shiftAlignMode)return f.slice(startIdx,startIdx+visCount);
-    const shiftMins=results[fi]&&results[fi].res?results[fi].res.shiftMins:0;
-    const shiftBars=Math.round(shiftMins/currentTF);
-    // pull each displayed bar's value from (idx - shiftBars) in the forecast's own series,
-    // so a leading forecast (shift>0) visually lands later, overlapping where Actual reaches it
-    const out=[];
-    for(let i=0;i<visCount;i++){
-      const srcIdx=startIdx+i-shiftBars;
-      out.push(f[srcIdx]||undefined);
+    let out;
+    if(!shiftAlignMode){
+      out=f.slice(startIdx,startIdx+visCount);
+    }else{
+      const shiftMins=results[fi]&&results[fi].res?results[fi].res.shiftMins:0;
+      const shiftBars=Math.round(shiftMins/currentTF);
+      // pull each displayed bar's value from (idx - shiftBars) in the forecast's own series,
+      // so a leading forecast (shift>0) visually lands later, overlapping where Actual reaches it
+      out=[];
+      for(let i=0;i<visCount;i++){
+        const srcIdx=startIdx+i-shiftBars;
+        out.push(f[srcIdx]||undefined);
+      }
+    }
+    if(offsetAlignMode){
+      // re-center this model's level so its first visible (defined) point matches Actual's first visible point —
+      // isolates whether the WAVE RHYTHM matches once the vertical gap is ignored. Purely visual; real level/error
+      // stays intact everywhere else (metrics table, pins' underlying numbers are just the display copy shifted).
+      let firstFc=null,firstLv=null;
+      for(let i=0;i<out.length;i++){if(out[i]){firstFc=out[i].c;break;}}
+      for(let i=0;i<lvSl.length;i++){if(lvSl[i]){firstLv=lvSl[i].c;break;}}
+      if(firstFc!==null&&firstLv!==null){
+        const off=firstLv-firstFc;
+        out=out.map(d=>d?{...d,c:+(d.c+off).toFixed(2)}:d);
+      }
     }
     return out;
   });
@@ -1714,7 +1752,7 @@ function draw(){
     const col=FORECASTS[fi].color;
     // Bollinger Band for this forecast (drawn first, so line sits on top) — skipped in shift-align mode,
     // since the band is computed on unshifted indices and would visually mismatch the shifted line
-    if(bbActive&&fcBBArr[fi]&&!shiftAlignMode){
+    if(bbActive&&fcBBArr[fi]&&!shiftAlignMode&&!offsetAlignMode){
       ctx.beginPath();let started=false;const upPts=[],loPts=[];
       sl.forEach((_,i)=>{
         const b=fcBBArr[fi][startIdx+i];if(!b)return;
@@ -1741,7 +1779,7 @@ function draw(){
     });
     ctx.stroke();ctx.setLineDash([]);
     // MA for each forecast (subtle) — skipped in shift-align mode, same reason as BB above
-    if(!shiftAlignMode)[[fcMA20Arr[fi],mas[20]],[fcMA50Arr[fi],mas[50]]].forEach(([arr,cfg])=>{
+    if(!shiftAlignMode&&!offsetAlignMode)[[fcMA20Arr[fi],mas[20]],[fcMA50Arr[fi],mas[50]]].forEach(([arr,cfg])=>{
       if(!cfg.active||!arr)return;
       ctx.strokeStyle=col;ctx.lineWidth=0.75;ctx.lineJoin='round';ctx.setLineDash([2,2]);ctx.globalAlpha=0.55;
       ctx.beginPath();let first=true;
