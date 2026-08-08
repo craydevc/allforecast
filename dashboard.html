@@ -1296,16 +1296,28 @@ function analyse(lv,fc){
   const dirAcc=dirT?Math.round(dirM/dirT*100):0;
   const upAcc=upT?Math.round(upM/upT*100):0;
   const dnAcc=dnT?Math.round(dnM/dnT*100):0;
-  // rolling "right now" window — trailing ~15 min, corr + direction together
-  const rw=Math.min(n,Math.max(2,Math.floor(15/currentTF)));
+  // rolling "right now" window — trailing ~15 min, auto-detect best shift within it, then judge on THAT alignment
+  const rw=Math.min(n,Math.max(4,Math.floor(15/currentTF)));
   const rax=ax.slice(n-rw),rbx=bx.slice(n-rw);
-  const rollCorr=r2p(pearson(rax,rbx));
+  const rollCorr=r2p(pearson(rax,rbx)); // unshifted, still shown for reference
+  const rMxS=Math.max(1,Math.min(10,Math.floor(rw/3)));
+  let rBestS=0,rBestR=-2;
+  for(let sh=-rMxS;sh<=rMxS;sh++){
+    let la,fb;
+    if(sh>=0){la=rax.slice(sh,rw);fb=rbx.slice(0,rw-sh);}else{la=rax.slice(0,rw+sh);fb=rbx.slice(-sh,rw);}
+    if(la.length<2)continue;
+    const r=pearson(la,fb);if(r>rBestR){rBestR=r;rBestS=sh;}
+  }
+  const rollShiftCorr=r2p(rBestR);
+  let rsLa,rsFb;
+  if(rBestS>=0){rsLa=rax.slice(rBestS,rw);rsFb=rbx.slice(0,rw-rBestS);}else{rsLa=rax.slice(0,rw+rBestS);rsFb=rbx.slice(-rBestS,rw);}
   let rDirT=0,rDirM=0;
-  for(let i=1;i<rax.length;i++){
-    const ld=rax[i]-rax[i-1],fd=rbx[i]-rbx[i-1];
+  for(let i=1;i<rsLa.length;i++){
+    const ld=rsLa[i]-rsLa[i-1],fd=rsFb[i]-rsFb[i-1];
     rDirT++;if((ld>=0&&fd>=0)||(ld<0&&fd<0))rDirM++;
   }
-  const rollDirAcc=rDirT?Math.round(rDirM/rDirT*100):0;
+  const rollDirAcc=rDirT?Math.round(rDirM/rDirT*100):0; // now shift-corrected
+  const rollShiftMins=rBestS*currentTF;
   // magnitude
   const errs=ax.map((v,i)=>Math.abs(v-bx[i]));
   const mae=+(errs.reduce((a,b)=>a+b,0)/n).toFixed(1);
@@ -1342,7 +1354,7 @@ function analyse(lv,fc){
   const trendMatch=(ax[n-1]>=ax[0])===(bx[n-1]>=bx[0]);
   // composite
   const score=Math.round(corrFull*0.20+corr30*0.15+corr15*0.10+dirAcc*0.15+within10*0.10+corrMorn*0.10+corrAftn*0.10+hiAcc*0.05+loAcc*0.05);
-  return{corrFull,corr60,corr30,corr15,corr5,bestWin,worstWin,dirAcc,upAcc,dnAcc,maxStreak,curStreak,mae,maxErr,within5,within10,within20,shiftMins,shiftLabel,corrMorn,corrAftn,trendMatch,peakOk,troughOk,peakDiff,troughDiff,hiAcc,loAcc,eodAcc,score,rollCorr,rollDirAcc};
+  return{corrFull,corr60,corr30,corr15,corr5,bestWin,worstWin,dirAcc,upAcc,dnAcc,maxStreak,curStreak,mae,maxErr,within5,within10,within20,shiftMins,shiftLabel,corrMorn,corrAftn,trendMatch,peakOk,troughOk,peakDiff,troughDiff,hiAcc,loAcc,eodAcc,score,rollCorr,rollDirAcc,rollShiftCorr,rollShiftMins};
 }
 
 let results=[];
@@ -1370,7 +1382,8 @@ function calcAllSim(){
 // ============================================================
 // LIVE "CLOSE TO FORECAST" SIGNAL + AUDIO ALERT
 // ============================================================
-let audioCtx=null,soundOn=false,lastSignalState='off',lastBeepTime=0;
+let audioCtx=null,soundOn=false,lastSignalState='off',lastBeepTime=0,goodStreak=0,lastBarSeenCount=-1;
+const GOOD_STREAK_NEEDED=3; // require this many actual NEW bars showing "good" before it counts as real, not a blip
 const BEEP_COOLDOWN_MS=60000; // don't re-beep more than once a minute
 window.toggleSound=function(){
   soundOn=!soundOn;
@@ -1463,21 +1476,33 @@ function runRangeAnalysis(){
 
 function updateSignal(best){
   const box=document.getElementById('sim-signal'),sub=document.getElementById('sub-signal'),bar=document.getElementById('bar-signal');
-  if(!best||!best.res){box.textContent='--';box.style.color='#555';sub.textContent='waiting...';return;}
+  if(!best||!best.res){box.textContent='--';box.style.color='#555';sub.textContent='waiting...';goodStreak=0;return;}
   const r=best.res;
   let state,color,label;
-  if(r.rollCorr>=70&&r.rollDirAcc>=60){state='good';color='#26a69a';label='✅ TRACKING WELL';}
-  else if(r.rollCorr>=55&&r.rollDirAcc>=50){state='weak';color='#f0b429';label='〜 MIXED';}
+  if(r.rollShiftCorr>=70&&r.rollDirAcc>=60){state='good';color='#26a69a';label='✅ TRACKING WELL';}
+  else if(r.rollShiftCorr>=55&&r.rollDirAcc>=50){state='weak';color='#f0b429';label='〜 MIXED';}
   else{state='off';color='#ef5350';label='✕ NOT RELIABLE';}
+  const shiftTxt=r.rollShiftMins===0?'in sync':r.rollShiftMins>0?`+${r.rollShiftMins}m lead`:`${r.rollShiftMins}m lag`;
+
+  // only advance the confirmation streak when a genuinely NEW bar has arrived (protects against stale/repeated
+  // fetches — e.g. market closed, feed hiccup — falsely counting as consecutive good readings)
+  const barCountNow=liveData.length;
+  const isNewBar=barCountNow!==lastBarSeenCount;
+  lastBarSeenCount=barCountNow;
+  if(isNewBar){goodStreak=state==='good'?goodStreak+1:0;}
+  // if no new bar arrived, leave goodStreak as-is (don't reset, don't advance) — just wait for real data
+  const confirmed=goodStreak>=GOOD_STREAK_NEEDED;
+  if(state==='good'&&!confirmed){label=`⏳ Confirming (${goodStreak}/${GOOD_STREAK_NEEDED} bars)`;color='#f0b429';}
+
   box.textContent=label;box.style.color=color;
-  bar.style.width=Math.max(r.rollCorr,r.rollDirAcc)+'%';bar.style.background=color;
-  sub.textContent=`${best.name} · corr ${r.rollCorr}% · dir ${r.rollDirAcc}% (last 15m)`;
+  bar.style.width=Math.max(r.rollShiftCorr,r.rollDirAcc)+'%';bar.style.background=color;
+  sub.textContent=`${best.name} · corr ${r.rollShiftCorr}% · dir ${r.rollDirAcc}% · ${shiftTxt} (last 15m)`+(isNewBar?'':' · ⚠️ no new bar (feed stale/market closed?)');
   const nowMs=Date.now();
-  if(state==='good'&&lastSignalState!=='good'){
+  if(confirmed&&lastSignalState!=='confirmed'){
     box.classList.remove('pulse');void box.offsetWidth;box.classList.add('pulse');
     if((nowMs-lastBeepTime)>BEEP_COOLDOWN_MS){beep('good');lastBeepTime=nowMs;}
   }
-  lastSignalState=state;
+  lastSignalState=confirmed?'confirmed':state;
 }
 
 function setBox(key,pct,sub){
