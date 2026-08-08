@@ -41,7 +41,7 @@
   #tooltip { position:absolute; pointer-events:none; background:rgba(19,23,34,0.96); border:1px solid #363a45; border-radius:5px; padding:6px 10px; font-size:11px; line-height:1.8; display:none; white-space:nowrap; z-index:10; }
 
   /* ── SIM PANEL ── */
-  #sim-panel { flex-shrink:0; margin-bottom:6px; background:#131722; border-radius:7px; border:1px solid #1e222d; padding:6px 10px; display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  #sim-panel { flex-shrink:0; margin-bottom:6px; background:#131722; border-radius:7px; border:1px solid #1e222d; padding:6px 10px; display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
   .sim-box { display:flex; flex-direction:column; gap:2px; }
   .sim-label { font-size:9px; color:#555; text-transform:uppercase; letter-spacing:0.5px; }
   .sim-val { font-size:16px; font-weight:700; }
@@ -83,6 +83,8 @@
 
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
   @media(max-width:600px) { #sim-panel{grid-template-columns:repeat(2,1fr);} #chart-area{height:calc(100vh - 160px); min-height:320px;} }
+  #sim-signal.pulse { animation:sigPulse 1s ease-in-out 3; }
+  @keyframes sigPulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
 </style>
 </head>
 <body>
@@ -158,6 +160,8 @@
   <div class="sep"></div>
   <button class="btn" onclick="exportAPI()">⬇ Export API</button>
   <div class="sep"></div>
+  <button class="btn" id="btn-sound" onclick="toggleSound()">🔕 Sound Off</button>
+  <div class="sep"></div>
   <span id="hover-info"></span>
 </div>
 
@@ -190,6 +194,12 @@
     <div class="sim-val" id="sim-shift" style="color:#f0b429">--</div>
     <div class="sim-bar-bg"><div class="sim-bar-fill" id="bar-shift" style="width:50%;background:#f0b429"></div></div>
     <div class="sim-sub" id="sub-shift">offset</div>
+  </div>
+  <div class="sim-box" style="border:1px solid #333">
+    <div class="sim-label">🔔 Live Signal</div>
+    <div class="sim-val" id="sim-signal" style="color:#555;font-size:14px">--</div>
+    <div class="sim-bar-bg"><div class="sim-bar-fill" id="bar-signal" style="width:0%"></div></div>
+    <div class="sim-sub" id="sub-signal">waiting...</div>
   </div>
 </div>
 
@@ -1275,6 +1285,16 @@ function analyse(lv,fc){
   const dirAcc=dirT?Math.round(dirM/dirT*100):0;
   const upAcc=upT?Math.round(upM/upT*100):0;
   const dnAcc=dnT?Math.round(dnM/dnT*100):0;
+  // rolling "right now" window — trailing ~15 min, corr + direction together
+  const rw=Math.min(n,Math.max(2,Math.floor(15/currentTF)));
+  const rax=ax.slice(n-rw),rbx=bx.slice(n-rw);
+  const rollCorr=r2p(pearson(rax,rbx));
+  let rDirT=0,rDirM=0;
+  for(let i=1;i<rax.length;i++){
+    const ld=rax[i]-rax[i-1],fd=rbx[i]-rbx[i-1];
+    rDirT++;if((ld>=0&&fd>=0)||(ld<0&&fd<0))rDirM++;
+  }
+  const rollDirAcc=rDirT?Math.round(rDirM/rDirT*100):0;
   // magnitude
   const errs=ax.map((v,i)=>Math.abs(v-bx[i]));
   const mae=+(errs.reduce((a,b)=>a+b,0)/n).toFixed(1);
@@ -1311,7 +1331,7 @@ function analyse(lv,fc){
   const trendMatch=(ax[n-1]>=ax[0])===(bx[n-1]>=bx[0]);
   // composite
   const score=Math.round(corrFull*0.20+corr30*0.15+corr15*0.10+dirAcc*0.15+within10*0.10+corrMorn*0.10+corrAftn*0.10+hiAcc*0.05+loAcc*0.05);
-  return{corrFull,corr60,corr30,corr15,corr5,bestWin,worstWin,dirAcc,upAcc,dnAcc,maxStreak,curStreak,mae,maxErr,within5,within10,within20,shiftMins,shiftLabel,corrMorn,corrAftn,trendMatch,peakOk,troughOk,peakDiff,troughDiff,hiAcc,loAcc,eodAcc,score};
+  return{corrFull,corr60,corr30,corr15,corr5,bestWin,worstWin,dirAcc,upAcc,dnAcc,maxStreak,curStreak,mae,maxErr,within5,within10,within20,shiftMins,shiftLabel,corrMorn,corrAftn,trendMatch,peakOk,troughOk,peakDiff,troughDiff,hiAcc,loAcc,eodAcc,score,rollCorr,rollDirAcc};
 }
 
 let results=[];
@@ -1333,6 +1353,55 @@ function calcAllSim(){
     else if(r.shiftMins>0){se.textContent=`+${r.shiftMins}m`;se.style.color='#f0b429';document.getElementById('sub-shift').textContent=`${best.name} ${r.shiftMins}m ahead`;}
     else{se.textContent=`${r.shiftMins}m`;se.style.color='#e040fb';document.getElementById('sub-shift').textContent=`${best.name} ${Math.abs(r.shiftMins)}m behind`;}
   }
+  updateSignal(best);
+}
+
+// ============================================================
+// LIVE "CLOSE TO FORECAST" SIGNAL + AUDIO ALERT
+// ============================================================
+let audioCtx=null,soundOn=false,lastSignalState='off',lastBeepTime=0;
+const BEEP_COOLDOWN_MS=60000; // don't re-beep more than once a minute
+window.toggleSound=function(){
+  soundOn=!soundOn;
+  if(soundOn&&!audioCtx){audioCtx=new (window.AudioContext||window.webkitAudioContext)();}
+  else if(soundOn&&audioCtx&&audioCtx.state==='suspended'){audioCtx.resume();}
+  const b=document.getElementById('btn-sound');
+  b.textContent=soundOn?'🔔 Sound On':'🔕 Sound Off';
+  b.classList.toggle('active',soundOn);
+};
+function beep(kind){
+  if(!soundOn||!audioCtx)return;
+  const now=audioCtx.currentTime;
+  // two friendly ascending tones for "good", one flat tone for "weak"
+  const freqs=kind==='good'?[880,1175]:[440];
+  freqs.forEach((f,idx)=>{
+    const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();
+    osc.type='sine';osc.frequency.value=f;
+    const t=now+idx*0.14;
+    gain.gain.setValueAtTime(0,t);
+    gain.gain.linearRampToValueAtTime(0.18,t+0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001,t+0.16);
+    osc.connect(gain);gain.connect(audioCtx.destination);
+    osc.start(t);osc.stop(t+0.18);
+  });
+}
+function updateSignal(best){
+  const box=document.getElementById('sim-signal'),sub=document.getElementById('sub-signal'),bar=document.getElementById('bar-signal');
+  if(!best||!best.res){box.textContent='--';box.style.color='#555';sub.textContent='waiting...';return;}
+  const r=best.res;
+  let state,color,label;
+  if(r.rollCorr>=70&&r.rollDirAcc>=60){state='good';color='#26a69a';label='✅ TRACKING WELL';}
+  else if(r.rollCorr>=55&&r.rollDirAcc>=50){state='weak';color='#f0b429';label='〜 MIXED';}
+  else{state='off';color='#ef5350';label='✕ NOT RELIABLE';}
+  box.textContent=label;box.style.color=color;
+  bar.style.width=Math.max(r.rollCorr,r.rollDirAcc)+'%';bar.style.background=color;
+  sub.textContent=`${best.name} · corr ${r.rollCorr}% · dir ${r.rollDirAcc}% (last 15m)`;
+  const nowMs=Date.now();
+  if(state==='good'&&lastSignalState!=='good'){
+    box.classList.remove('pulse');void box.offsetWidth;box.classList.add('pulse');
+    if((nowMs-lastBeepTime)>BEEP_COOLDOWN_MS){beep('good');lastBeepTime=nowMs;}
+  }
+  lastSignalState=state;
 }
 
 function setBox(key,pct,sub){
