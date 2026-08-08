@@ -138,7 +138,7 @@
 <div id="main" style="display:none;flex-direction:column;flex:1;">
 
 <div id="topbar">
-  <h1>📈 Nifty 50 — Live vs Forecast: 07 Aug 2026- Friday : NSE India Spot Index </h1>
+  <h1>📈 Nifty 50 — Live vs Forecast: <span id="page-date">loading date…</span> : NSE India Spot Index </h1>
   <span id="status">Loading...</span>
   <div id="userbar">
     <span id="u-email"></span>
@@ -181,7 +181,7 @@
 
 <div id="chart-area">
   <div id="shift-banner">🧲 Shift-Aligned View — model lines nudged in TIME only (to their best-fit lead/lag) to overlay Actual for shape comparison. Not a live prediction — magnitude/error still shown true.</div>
-  <div id="offset-banner">↕ Offset-Aligned View — each model's LEVEL re-centered to Actual's current starting point, to check if the wave rhythm matches once the vertical gap is ignored. Real level/error still shown in the metrics table, not here.</div>
+  <div id="offset-banner">↕ Offset-Aligned View — each model's LEVEL re-centered using the true 9:15 session-start point (not scroll position), to check if the wave rhythm matches once any accumulated vertical gap is ignored. Real level/error still shown in the metrics table, not here.</div>
   <canvas id="cv"></canvas>
   <div id="tooltip"></div>
 </div>
@@ -1120,7 +1120,7 @@ const PROXIES=[
 const mas={20:{active:true,color:'#f0b429'},50:{active:true,color:'#e040fb'}};
 let bbActive=true;
 
-let liveData=[],liveRaw=[],currentTF=1,dataSource='live';
+let liveData=[],liveRaw=[],currentTF=1,dataSource='live',dataDateStr='';
 let PRE_OPEN=null,refreshTimer,countdownTimer,cdVal=60;
 let lvData=[],fcDataArr=[],lvMA20=[],lvMA50=[],lvBB=[],fcMA20Arr=[],fcMA50Arr=[],fcBBArr=[];
 let startIdx=0,visCount=0;
@@ -1198,6 +1198,8 @@ async function tryFetch(url){
 async function fetchAndUpdate(){
   if(dataSource==='test'){
     liveData=TEST_LIVE;
+    dataDateStr='Test Data (not a real date)';
+    document.getElementById('page-date').textContent=dataDateStr;
     setStatus(`📋 Test · ${TEST_LIVE.length} bars`);
     buildAll();calcAllSim();renderTable();draw();return;
   }
@@ -1215,6 +1217,10 @@ async function fetchAndUpdate(){
     if(lastTs){
       const ageMin=Math.round((Date.now()/1000-lastTs)/60);
       if(ageMin>=3){freshTxt=` · <span style="color:#f0b429">⚠️ last bar is ~${ageMin}m old (source delay, not cache)</span>`;}
+      // derive the actual trading date this data belongs to, straight from Yahoo's own timestamp —
+      // not wall-clock "today", so a stale/weekend view correctly shows the real session date
+      dataDateStr=new Date(lastTs*1000).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric',weekday:'long'});
+      document.getElementById('page-date').textContent=dataDateStr;
     }
     setStatus(`<span style="color:#ef5350;animation:pulse 1.5s infinite;display:inline-block">●</span> Live · ${liveData.length} bars · <span id="cd">${cdVal}</span>s${freshTxt}`);
     document.getElementById('last-update').textContent='Updated: '+new Date().toLocaleTimeString('en-IN');
@@ -1710,14 +1716,15 @@ function draw(){
       }
     }
     if(offsetAlignMode){
-      // re-center this model's level so its first visible (defined) point matches Actual's first visible point —
-      // isolates whether the WAVE RHYTHM matches once the vertical gap is ignored. Purely visual; real level/error
-      // stays intact everywhere else (metrics table, pins' underlying numbers are just the display copy shifted).
-      let firstFc=null,firstLv=null;
-      for(let i=0;i<out.length;i++){if(out[i]){firstFc=out[i].c;break;}}
-      for(let i=0;i<lvSl.length;i++){if(lvSl[i]){firstLv=lvSl[i].c;break;}}
-      if(firstFc!==null&&firstLv!==null){
-        const off=firstLv-firstFc;
+      // re-center this model's level using the TRUE session start (bar 0), not whatever's first visible
+      // on screen — both series are defined as change-from-9:15-open, so bar 0 is the real, implied zero
+      // they share by construction (Actual's own first plotted bar is ~1min past that, forecast's is exact 0).
+      // Anchoring here instead of to the current scroll position keeps the diagnostic consistent everywhere,
+      // whether you're looking at the full day or zoomed into an afternoon window.
+      const firstFc0=f[0]?f[0].c:null;
+      const firstLv0=lvData[0]?lvData[0].c:null;
+      if(firstFc0!==null&&firstLv0!==null){
+        const off=firstLv0-firstFc0;
         out=out.map(d=>d?{...d,c:+(d.c+off).toFixed(2)}:d);
       }
     }
@@ -1837,13 +1844,17 @@ function draw(){
         if(first){ctx.moveTo(x,y);first=false;}else ctx.lineTo(x,y);
       });ctx.stroke();ctx.setLineDash([]);
     });
-    // ACTUAL label
+    // ACTUAL label — includes the real data date, so a screenshot alone (no header visible) still
+    // tells you which session this is, and whether it's today's live data or an old/cached view
     if(lvSl.length>10){
       const mi=Math.floor(lvSl.length/2);
       const mx=pxX(mi,cw),my=pxY(lvSl[mi].c,lo,hi)-14;
-      ctx.fillStyle='rgba(255,255,255,0.12)';ctx.beginPath();ctx.rect(mx-24,my-8,48,16);ctx.fill();
-      ctx.fillStyle='#fff';ctx.font='bold 9px monospace';ctx.textAlign='center';
-      ctx.fillText('ACTUAL',mx,my+4);
+      const lbl2=dataDateStr?`ACTUAL · ${dataDateStr}`:'ACTUAL';
+      ctx.font='bold 9px monospace';
+      const lw2=ctx.measureText(lbl2).width+16;
+      ctx.fillStyle='rgba(255,255,255,0.12)';ctx.beginPath();ctx.rect(mx-lw2/2,my-8,lw2,16);ctx.fill();
+      ctx.fillStyle='#fff';ctx.textAlign='center';
+      ctx.fillText(lbl2,mx,my+4);
     }
   }
 
