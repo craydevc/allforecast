@@ -86,6 +86,8 @@
   #sim-signal.pulse { animation:sigPulse 1s ease-in-out 3; }
   @keyframes sigPulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
   #btn-selrange.active { background:#2962ff; color:#fff; }
+  #btn-shiftalign.active { background:#7c4dff; color:#fff; }
+  #shift-banner { display:none; background:#7c4dff; color:#fff; font-size:10px; padding:3px 10px; text-align:center; border-radius:5px; margin-bottom:4px; }
   #range-result { flex-shrink:0; margin-bottom:6px; background:#131722; border:1px solid #2962ff; border-radius:7px; padding:8px 12px; font-size:11px; color:#d1d4dc; }
   #range-result .rr-title { color:#888; font-size:10px; margin-bottom:6px; display:flex; justify-content:space-between; }
   #range-result .rr-close { cursor:pointer; color:#888; }
@@ -134,7 +136,7 @@
 <div id="main" style="display:none;flex-direction:column;flex:1;">
 
 <div id="topbar">
-  <h1>📈 Nifty 50 — Live vs Forecast: 07 Aug 2026- Friday : NSE India Spot Index , software updated</h1>
+  <h1>📈 Nifty 50 — Live vs Forecast: 07 Aug 2026- Friday : NSE India Spot Index, software updated on 8th aug </h1>
   <span id="status">Loading...</span>
   <div id="userbar">
     <span id="u-email"></span>
@@ -169,11 +171,13 @@
   <div class="sep"></div>
   <button class="btn" id="btn-sound" onclick="toggleSound()">🔕 Sound Off</button>
   <button class="btn" id="btn-selrange" onclick="toggleSelMode()">🔍 Select Range</button>
+  <button class="btn" id="btn-shiftalign" onclick="toggleShiftAlign()" title="Nudges each model's line forward/back in time to overlay Actual — for shape comparison only, not a live prediction">🧲 Shift-Align</button>
   <div class="sep"></div>
   <span id="hover-info"></span>
 </div>
 
 <div id="chart-area">
+  <div id="shift-banner">🧲 Shift-Aligned View — model lines nudged in TIME only (to their best-fit lead/lag) to overlay Actual for shape comparison. Not a live prediction — magnitude/error still shown true.</div>
   <canvas id="cv"></canvas>
   <div id="tooltip"></div>
 </div>
@@ -1117,6 +1121,13 @@ let PRE_OPEN=null,refreshTimer,countdownTimer,cdVal=60;
 let lvData=[],fcDataArr=[],lvMA20=[],lvMA50=[],lvBB=[],fcMA20Arr=[],fcMA50Arr=[],fcBBArr=[];
 let startIdx=0,visCount=0;
 let selMode=false,selDragging=false,selStartBar=null,selEndBar=null;
+let shiftAlignMode=false;
+window.toggleShiftAlign=function(){
+  shiftAlignMode=!shiftAlignMode;
+  document.getElementById('btn-shiftalign').classList.toggle('active',shiftAlignMode);
+  document.getElementById('shift-banner').style.display=shiftAlignMode?'block':'none';
+  draw();
+};
 let isDrag=false,dragX=0,dragIdx=0;
 let mouseX=-1,mouseY=-1,W,H;
 
@@ -1661,8 +1672,20 @@ function draw(){
   if(visCount===0)visCount=max;
   const cw=(W-PAD.L-PAD.R)/visCount;
   const lvSl=lvData.slice(startIdx,startIdx+visCount);
-  const fcSls=fcDataArr.map(f=>f.slice(startIdx,startIdx+visCount));
-  const allV=[...lvSl.map(d=>d.c),...fcSls.flatMap(f=>f.map(d=>d.c))].filter(v=>v!==undefined);
+  const fcSls=fcDataArr.map((f,fi)=>{
+    if(!shiftAlignMode)return f.slice(startIdx,startIdx+visCount);
+    const shiftMins=results[fi]&&results[fi].res?results[fi].res.shiftMins:0;
+    const shiftBars=Math.round(shiftMins/currentTF);
+    // pull each displayed bar's value from (idx - shiftBars) in the forecast's own series,
+    // so a leading forecast (shift>0) visually lands later, overlapping where Actual reaches it
+    const out=[];
+    for(let i=0;i<visCount;i++){
+      const srcIdx=startIdx+i-shiftBars;
+      out.push(f[srcIdx]||undefined);
+    }
+    return out;
+  });
+  const allV=[...lvSl.map(d=>d.c),...fcSls.flatMap(f=>f.filter(d=>d).map(d=>d.c))];
   if(!allV.length)return;
   let lo=Math.min(...allV,0),hi=Math.max(...allV,0);
   const pad=Math.max((hi-lo)*0.10,1);lo-=pad;hi+=pad;
@@ -1689,8 +1712,9 @@ function draw(){
   fcSls.forEach((sl,fi)=>{
     if(!sl.length)return;
     const col=FORECASTS[fi].color;
-    // Bollinger Band for this forecast (drawn first, so line sits on top)
-    if(bbActive&&fcBBArr[fi]){
+    // Bollinger Band for this forecast (drawn first, so line sits on top) — skipped in shift-align mode,
+    // since the band is computed on unshifted indices and would visually mismatch the shifted line
+    if(bbActive&&fcBBArr[fi]&&!shiftAlignMode){
       ctx.beginPath();let started=false;const upPts=[],loPts=[];
       sl.forEach((_,i)=>{
         const b=fcBBArr[fi][startIdx+i];if(!b)return;
@@ -1709,11 +1733,15 @@ function draw(){
       }
     }
     ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.lineJoin='round';ctx.setLineDash([6,3]);
-    ctx.beginPath();
-    sl.forEach((d,i)=>{const x=pxX(i,cw),y=pxY(d.c,lo,hi);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+    ctx.beginPath();let started=false;
+    sl.forEach((d,i)=>{
+      if(!d)return; // gap where the shifted window has no data (edge of series)
+      const x=pxX(i,cw),y=pxY(d.c,lo,hi);
+      if(!started){ctx.moveTo(x,y);started=true;}else ctx.lineTo(x,y);
+    });
     ctx.stroke();ctx.setLineDash([]);
-    // MA for each forecast (subtle)
-    [[fcMA20Arr[fi],mas[20]],[fcMA50Arr[fi],mas[50]]].forEach(([arr,cfg])=>{
+    // MA for each forecast (subtle) — skipped in shift-align mode, same reason as BB above
+    if(!shiftAlignMode)[[fcMA20Arr[fi],mas[20]],[fcMA50Arr[fi],mas[50]]].forEach(([arr,cfg])=>{
       if(!cfg.active||!arr)return;
       ctx.strokeStyle=col;ctx.lineWidth=0.75;ctx.lineJoin='round';ctx.setLineDash([2,2]);ctx.globalAlpha=0.55;
       ctx.beginPath();let first=true;
@@ -1842,7 +1870,9 @@ function draw(){
   // last price pins
   [[lvSl,'#fff'],...fcSls.map((sl,i)=>[sl,FORECASTS[i].color])].forEach(([sl,col])=>{
     if(!sl||!sl.length)return;
-    const last=sl[sl.length-1];
+    let last=sl[sl.length-1];
+    if(!last){for(let k=sl.length-1;k>=0;k--){if(sl[k]){last=sl[k];break;}}}
+    if(!last)return;
     const ly=pxY(last.c,lo,hi);
     ctx.fillStyle=col;ctx.beginPath();ctx.rect(W-PAD.R+1,ly-9,PAD.R-3,18);ctx.fill();
     ctx.fillStyle='#000';ctx.font='bold 9px monospace';ctx.textAlign='left';
