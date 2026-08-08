@@ -85,6 +85,13 @@
   @media(max-width:600px) { #sim-panel{grid-template-columns:repeat(2,1fr);} #chart-area{height:calc(100vh - 160px); min-height:320px;} }
   #sim-signal.pulse { animation:sigPulse 1s ease-in-out 3; }
   @keyframes sigPulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+  #btn-selrange.active { background:#2962ff; color:#fff; }
+  #range-result { flex-shrink:0; margin-bottom:6px; background:#131722; border:1px solid #2962ff; border-radius:7px; padding:8px 12px; font-size:11px; color:#d1d4dc; }
+  #range-result .rr-title { color:#888; font-size:10px; margin-bottom:6px; display:flex; justify-content:space-between; }
+  #range-result .rr-close { cursor:pointer; color:#888; }
+  #range-result .rr-row { display:flex; gap:14px; flex-wrap:wrap; margin-top:3px; }
+  #range-result .rr-model { min-width:150px; }
+  #range-result .rr-metric { display:inline-block; margin-right:10px; }
 </style>
 </head>
 <body>
@@ -161,6 +168,7 @@
   <button class="btn" onclick="exportAPI()">⬇ Export API</button>
   <div class="sep"></div>
   <button class="btn" id="btn-sound" onclick="toggleSound()">🔕 Sound Off</button>
+  <button class="btn" id="btn-selrange" onclick="toggleSelMode()">🔍 Select Range</button>
   <div class="sep"></div>
   <span id="hover-info"></span>
 </div>
@@ -169,6 +177,8 @@
   <canvas id="cv"></canvas>
   <div id="tooltip"></div>
 </div>
+
+<div id="range-result" style="display:none"></div>
 
 <div id="sim-panel">
   <div class="sim-box">
@@ -1106,6 +1116,7 @@ let liveData=[],liveRaw=[],currentTF=1,dataSource='live';
 let PRE_OPEN=null,refreshTimer,countdownTimer,cdVal=60;
 let lvData=[],fcDataArr=[],lvMA20=[],lvMA50=[],lvBB=[],fcMA20Arr=[],fcMA50Arr=[],fcBBArr=[];
 let startIdx=0,visCount=0;
+let selMode=false,selDragging=false,selStartBar=null,selEndBar=null;
 let isDrag=false,dragX=0,dragIdx=0;
 let mouseX=-1,mouseY=-1,W,H;
 
@@ -1385,6 +1396,63 @@ function beep(kind){
     osc.start(t);osc.stop(t+0.18);
   });
 }
+window.toggleSelMode=function(){
+  selMode=!selMode;
+  const b=document.getElementById('btn-selrange');
+  b.classList.toggle('active',selMode);
+  b.textContent=selMode?'🔍 Selecting… (drag chart)':'🔍 Select Range';
+  if(!selMode){selStartBar=null;selEndBar=null;draw();}
+};
+window.clearRangeResult=function(){
+  selStartBar=null;selEndBar=null;
+  document.getElementById('range-result').style.display='none';
+  draw();
+};
+function runRangeAnalysis(){
+  if(selStartBar===null||selEndBar===null)return;
+  const s=Math.min(selStartBar,selEndBar),e=Math.max(selStartBar,selEndBar);
+  if(e-s<2)return; // too small to be meaningful
+  const rawStart=s*currentTF,rawEnd=Math.min(liveData.length,(e+1)*currentTF);
+  const ax=liveData.slice(rawStart,rawEnd);
+  if(ax.length<3){
+    document.getElementById('range-result').style.display='block';
+    document.getElementById('range-result').innerHTML='<div class="rr-title"><span>Selection too short or before live data starts</span><span class="rr-close" onclick="clearRangeResult()">✕</span></div>';
+    return;
+  }
+  const labelStart=(lvData[s]||fcDataArr[0][s]||{}).label||'?';
+  const labelEnd=(lvData[e]||fcDataArr[0][e]||{}).label||'?';
+  let rows='';
+  FORECASTS.forEach(f=>{
+    const bx=f.data.slice(rawStart,rawEnd);
+    const n=Math.min(ax.length,bx.length);
+    if(n<3)return;
+    const a2=ax.slice(0,n),b2=bx.slice(0,n);
+    const corr=r2p(pearson(a2,b2));
+    let dT=0,dM=0;
+    for(let i=1;i<n;i++){const ld=a2[i]-a2[i-1],fd=b2[i]-b2[i-1];dT++;if((ld>=0&&fd>=0)||(ld<0&&fd<0))dM++;}
+    const dirAcc=dT?Math.round(dM/dT*100):0;
+    // best shift within this window (small range, capped to a third of the window)
+    const mxS=Math.max(1,Math.min(15,Math.floor(n/3)));
+    let bestS=0,bestR=-2;
+    for(let sh=-mxS;sh<=mxS;sh++){
+      let la,fb;
+      if(sh>=0){la=a2.slice(sh,n);fb=b2.slice(0,n-sh);}else{la=a2.slice(0,n+sh);fb=b2.slice(-sh,n);}
+      if(la.length<2)continue;
+      const r=pearson(la,fb);if(r>bestR){bestR=r;bestS=sh;}
+    }
+    const shiftedCorr=r2p(bestR);
+    const shiftLabel=bestS===0?'in sync':bestS>0?`+${bestS}m lead`:`${bestS}m lag`;
+    const col=corr>=70?'#26a69a':corr>=50?'#f0b429':'#ef5350';
+    rows+=`<div class="rr-model"><b style="color:${f.color}">${f.name}</b><br>
+      <span class="rr-metric">Corr: <b style="color:${col}">${corr}%</b></span>
+      <span class="rr-metric">Direction: <b>${dirAcc}%</b></span>
+      <span class="rr-metric">Best shift: <b>${shiftLabel}</b> (${shiftedCorr}%)</span></div>`;
+  });
+  const panel=document.getElementById('range-result');
+  panel.style.display='block';
+  panel.innerHTML=`<div class="rr-title"><span>Selected window: ${labelStart} → ${labelEnd} (${e-s+1} bars)</span><span class="rr-close" onclick="clearRangeResult()">✕ clear</span></div><div class="rr-row">${rows}</div>`;
+}
+
 function updateSignal(best){
   const box=document.getElementById('sim-signal'),sub=document.getElementById('sub-signal'),bar=document.getElementById('bar-signal');
   if(!best||!best.res){box.textContent='--';box.style.color='#555';sub.textContent='waiting...';return;}
@@ -1680,6 +1748,15 @@ function draw(){
     }
   }
 
+  // range selection overlay
+  if(selStartBar!==null&&selEndBar!==null){
+    const s=Math.min(selStartBar,selEndBar)-startIdx,e=Math.max(selStartBar,selEndBar)-startIdx;
+    const x1=pxX(Math.max(0,s),cw),x2=pxX(Math.min(visCount-1,e),cw);
+    ctx.fillStyle='rgba(41,98,255,0.15)';ctx.fillRect(x1,PAD.T,x2-x1,H-PAD.T-PAD.B);
+    ctx.strokeStyle='rgba(41,98,255,0.7)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x1,PAD.T);ctx.lineTo(x1,H-PAD.B);ctx.moveTo(x2,PAD.T);ctx.lineTo(x2,H-PAD.B);ctx.stroke();
+  }
+
   // crosshair
   if(mouseX>=PAD.L&&mouseX<=W-PAD.R&&mouseY>=PAD.T&&mouseY<=H-PAD.B){
     const i=Math.max(0,Math.min(visCount-1,Math.floor((mouseX-PAD.L)/cw)));
@@ -1754,7 +1831,11 @@ function draw(){
 // ============================================================
 cv.addEventListener('mousemove',e=>{
   const r=cv.getBoundingClientRect();mouseX=e.clientX-r.left;mouseY=e.clientY-r.top;
-  if(isDrag){
+  if(selDragging){
+    const cw=(W-PAD.L-PAD.R)/visCount;
+    const i=Math.max(0,Math.min(visCount-1,Math.floor((mouseX-PAD.L)/cw)));
+    selEndBar=startIdx+i;
+  }else if(isDrag){
     const max=Math.max(lvData.length,...fcDataArr.map(f=>f.length));
     const cw=(W-PAD.L-PAD.R)/visCount;
     startIdx=Math.max(0,Math.min(max-visCount,dragIdx+Math.round(-(mouseX-dragX)/cw)));
@@ -1762,8 +1843,20 @@ cv.addEventListener('mousemove',e=>{
   draw();
 });
 cv.addEventListener('mouseleave',()=>{mouseX=-1;mouseY=-1;tip.style.display='none';document.getElementById('hover-info').textContent='';draw();});
-cv.addEventListener('mousedown',e=>{isDrag=true;dragX=e.clientX-cv.getBoundingClientRect().left;dragIdx=startIdx;cv.style.cursor='grabbing';});
-cv.addEventListener('mouseup',()=>{isDrag=false;cv.style.cursor='crosshair';});
+cv.addEventListener('mousedown',e=>{
+  const r=cv.getBoundingClientRect();const mx=e.clientX-r.left;
+  if(selMode){
+    const cw=(W-PAD.L-PAD.R)/visCount;
+    const i=Math.max(0,Math.min(visCount-1,Math.floor((mx-PAD.L)/cw)));
+    selDragging=true;selStartBar=startIdx+i;selEndBar=startIdx+i;
+  }else{
+    isDrag=true;dragX=mx;dragIdx=startIdx;cv.style.cursor='grabbing';
+  }
+});
+cv.addEventListener('mouseup',()=>{
+  isDrag=false;cv.style.cursor=selMode?'crosshair':'crosshair';
+  if(selDragging){selDragging=false;runRangeAnalysis();}
+});
 cv.addEventListener('wheel',e=>{
   e.preventDefault();
   const max=Math.max(lvData.length,...fcDataArr.map(f=>f.length));
@@ -1776,13 +1869,25 @@ cv.addEventListener('wheel',e=>{
 },{passive:false});
 let lTX=0,lPD=0;
 cv.addEventListener('touchstart',e=>{
-  if(e.touches.length===1){isDrag=true;lTX=e.touches[0].clientX;dragIdx=startIdx;}
+  if(e.touches.length===1){
+    const r=cv.getBoundingClientRect();const mx=e.touches[0].clientX-r.left;
+    if(selMode){
+      const cw=(W-PAD.L-PAD.R)/visCount;
+      const i=Math.max(0,Math.min(visCount-1,Math.floor((mx-PAD.L)/cw)));
+      selDragging=true;selStartBar=startIdx+i;selEndBar=startIdx+i;
+    }else{isDrag=true;lTX=e.touches[0].clientX;dragIdx=startIdx;}
+  }
   if(e.touches.length===2)lPD=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
   e.preventDefault();
 },{passive:false});
 cv.addEventListener('touchmove',e=>{
   const max=Math.max(lvData.length,...fcDataArr.map(f=>f.length));
-  if(e.touches.length===1&&isDrag){
+  if(e.touches.length===1&&selDragging){
+    const r=cv.getBoundingClientRect();const mx=e.touches[0].clientX-r.left;
+    const cw=(W-PAD.L-PAD.R)/visCount;
+    const i=Math.max(0,Math.min(visCount-1,Math.floor((mx-PAD.L)/cw)));
+    selEndBar=startIdx+i;draw();
+  }else if(e.touches.length===1&&isDrag){
     const cw=(W-PAD.L-PAD.R)/visCount;
     startIdx=Math.max(0,Math.min(max-visCount,dragIdx+Math.round(-(e.touches[0].clientX-lTX)/cw)));draw();
   }
@@ -1793,7 +1898,10 @@ cv.addEventListener('touchmove',e=>{
   }
   e.preventDefault();
 },{passive:false});
-cv.addEventListener('touchend',()=>{isDrag=false;});
+cv.addEventListener('touchend',()=>{
+  isDrag=false;
+  if(selDragging){selDragging=false;runRangeAnalysis();}
+});
 window.addEventListener('keydown',e=>{
   const max=Math.max(lvData.length,...fcDataArr.map(f=>f.length));
   const s=Math.max(1,Math.floor(visCount*0.1));
