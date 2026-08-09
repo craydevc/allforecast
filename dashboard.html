@@ -86,10 +86,16 @@
   #sim-signal.pulse { animation:sigPulse 1s ease-in-out 3; }
   @keyframes sigPulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
   #btn-selrange.active { background:#2962ff; color:#fff; }
-  #btn-shiftalign.active { background:#7c4dff; color:#fff; }
-  #btn-offsetalign.active { background:#00bcd4; color:#0e1117; }
+  #view-shift.active { background:#7c4dff; color:#fff; }
+  #view-offset.active { background:#00bcd4; color:#0e1117; }
+  #view-compare.active { background:#607d8b; color:#fff; }
   #shift-banner { display:none; background:#7c4dff; color:#fff; font-size:10px; padding:3px 10px; text-align:center; border-radius:5px; margin-bottom:4px; }
   #offset-banner { display:none; background:#00bcd4; color:#0e1117; font-size:10px; padding:3px 10px; text-align:center; border-radius:5px; margin-bottom:4px; }
+  #compare-banner { display:none; background:#607d8b; color:#fff; font-size:10px; padding:3px 10px; text-align:center; border-radius:5px; margin-bottom:4px; }
+  #chart-split { display:flex; flex-direction:row; width:100%; height:100%; gap:4px; }
+  .chart-pane { position:relative; flex:1; min-width:0; height:100%; }
+  .chart-pane canvas { width:100%; height:100%; display:block; }
+  .pane-label { position:absolute; top:4px; left:8px; font-size:10px; color:#888; background:#131722cc; padding:1px 6px; border-radius:3px; z-index:2; }
   #range-result { flex-shrink:0; margin-bottom:6px; background:#131722; border:1px solid #2962ff; border-radius:7px; padding:8px 12px; font-size:11px; color:#d1d4dc; }
   #range-result .rr-title { color:#888; font-size:10px; margin-bottom:6px; display:flex; justify-content:space-between; }
   #range-result .rr-close { cursor:pointer; color:#888; }
@@ -172,18 +178,36 @@
   <button class="btn" onclick="exportAPI()">⬇ Export API</button>
   <div class="sep"></div>
   <button class="btn" id="btn-sound" onclick="toggleSound()">🔕 Sound Off</button>
+  <button class="btn" id="btn-voice" onclick="toggleVoice()">🔇 Voice Off</button>
   <button class="btn" id="btn-selrange" onclick="toggleSelMode()">🔍 Select Range</button>
-  <button class="btn" id="btn-shiftalign" onclick="toggleShiftAlign()" title="Nudges each model's line forward/back in time to overlay Actual — for shape comparison only, not a live prediction">🧲 Shift-Align</button>
-  <button class="btn" id="btn-offsetalign" onclick="toggleOffsetAlign()" title="Re-centers each model's level to match Actual's starting point — checks if the WAVE RHYTHM matches once the vertical gap is removed">↕ Offset-Align</button>
+  <div class="sep"></div>
+  <span style="color:#666;font-size:10px">View:</span>
+  <button class="btn active" id="view-normal" onclick="setViewMode('normal')">Normal</button>
+  <button class="btn" id="view-shift" onclick="setViewMode('shift')" title="Nudges each model's line forward/back in time to overlay Actual — for shape comparison only, not a live prediction">🧲 Shift-Aligned</button>
+  <button class="btn" id="view-offset" onclick="setViewMode('offset')" title="Re-centers each model's level to match Actual's starting point — checks if the WAVE RHYTHM matches once the vertical gap is removed">↕ Offset-Aligned</button>
+  <button class="btn" id="view-compare" onclick="setViewMode('compare')" title="Shows Normal and an aligned view side by side, synced together">⬛⬛ Compare</button>
+  <span id="compare-pair-sel" style="display:none">
+    <button class="btn active" id="pair-shift" onclick="setComparePair('shift')">Pair: Shift</button>
+    <button class="btn" id="pair-offset" onclick="setComparePair('offset')">Pair: Offset</button>
+  </span>
   <div class="sep"></div>
   <span id="hover-info"></span>
 </div>
 
 <div id="chart-area">
   <div id="shift-banner">🧲 Shift-Aligned View — model lines nudged in TIME only (to their best-fit lead/lag) to overlay Actual for shape comparison. Not a live prediction — magnitude/error still shown true.</div>
-  <div id="offset-banner">↕ Offset-Aligned View — each model's LEVEL re-centered using the true 9:15 session-start point (not scroll position), to check if the wave rhythm matches once any accumulated vertical gap is ignored. Real level/error still shown in the metrics table, not here.</div>
-  <canvas id="cv"></canvas>
-  <div id="tooltip"></div>
+  <div id="offset-banner">↕ Offset-Aligned View — each model's LEVEL snapped to match Actual at whatever point is first visible in your current scroll/zoom (e.g. zoom to 1:10pm → both start together there). Shows whether the RHYTHM matches from that point on, ignoring earlier drift. Real level/error still shown in the metrics table, not here.</div>
+  <div id="compare-banner">⬛⬛ Compare View — left is Normal (raw), right is aligned. Scrolling/zooming either side moves both together. Select Range still reads the true, unaligned data.</div>
+  <div id="chart-split">
+    <div class="chart-pane" id="pane-left">
+      <canvas id="cv"></canvas>
+      <div id="tooltip"></div>
+    </div>
+    <div class="chart-pane" id="pane-right" style="display:none">
+      <div class="pane-label" id="pane-right-label">Shift-Aligned</div>
+      <canvas id="cv2"></canvas>
+    </div>
+  </div>
 </div>
 
 <div id="range-result" style="display:none"></div>
@@ -1126,16 +1150,29 @@ let lvData=[],fcDataArr=[],lvMA20=[],lvMA50=[],lvBB=[],fcMA20Arr=[],fcMA50Arr=[]
 let startIdx=0,visCount=0;
 let selMode=false,selDragging=false,selStartBar=null,selEndBar=null;
 let shiftAlignMode=false,offsetAlignMode=false;
-window.toggleShiftAlign=function(){
-  shiftAlignMode=!shiftAlignMode;
-  document.getElementById('btn-shiftalign').classList.toggle('active',shiftAlignMode);
-  document.getElementById('shift-banner').style.display=shiftAlignMode?'block':'none';
+let viewMode='normal',comparePair='shift';
+window.setViewMode=function(mode){
+  viewMode=mode;
+  ['normal','shift','offset','compare'].forEach(m=>document.getElementById('view-'+m).classList.toggle('active',m===mode));
+  document.getElementById('shift-banner').style.display=mode==='shift'?'block':'none';
+  document.getElementById('offset-banner').style.display=mode==='offset'?'block':'none';
+  document.getElementById('compare-banner').style.display=mode==='compare'?'block':'none';
+  document.getElementById('compare-pair-sel').style.display=mode==='compare'?'inline':'none';
+  document.getElementById('pane-right').style.display=mode==='compare'?'block':'none';
+  // the LEFT/primary chart: Normal in every mode except when a single-chart aligned view is chosen directly
+  shiftAlignMode=(mode==='shift');
+  offsetAlignMode=(mode==='offset');
+  if(mode==='compare'){
+    document.getElementById('pane-right-label').textContent=comparePair==='shift'?'Shift-Aligned':'Offset-Aligned';
+    resizeCompare();
+  }
   draw();
 };
-window.toggleOffsetAlign=function(){
-  offsetAlignMode=!offsetAlignMode;
-  document.getElementById('btn-offsetalign').classList.toggle('active',offsetAlignMode);
-  document.getElementById('offset-banner').style.display=offsetAlignMode?'block':'none';
+window.setComparePair=function(which){
+  comparePair=which;
+  document.getElementById('pair-shift').classList.toggle('active',which==='shift');
+  document.getElementById('pair-offset').classList.toggle('active',which==='offset');
+  document.getElementById('pane-right-label').textContent=which==='shift'?'Shift-Aligned':'Offset-Aligned';
   draw();
 };
 let isDrag=false,dragX=0,dragIdx=0;
@@ -1448,6 +1485,49 @@ function beep(kind){
     osc.start(t);osc.stop(t+0.18);
   });
 }
+
+// ============================================================
+// VOICE COMMENTARY — spoken running commentary using the browser's built-in
+// text-to-speech (free, offline, no external service). Speaks on state changes
+// (e.g. "Model B now tracking well"), plus a quiet recap every ~20 minutes so
+// it feels like ongoing commentary through the session rather than one-off pings.
+// ============================================================
+let voiceOn=false,lastSpokenState=null,lastCheckinBarCount=-1;
+const CHECKIN_EVERY_MIN=20;
+window.toggleVoice=function(){
+  voiceOn=!voiceOn;
+  const b=document.getElementById('btn-voice');
+  b.textContent=voiceOn?'🔊 Voice On':'🔇 Voice Off';
+  b.classList.toggle('active',voiceOn);
+  if(voiceOn)speak('Voice commentary on.');
+};
+function speak(text){
+  if(!voiceOn||!('speechSynthesis' in window))return;
+  window.speechSynthesis.cancel(); // don't let lines queue up and pile behind each other
+  const u=new SpeechSynthesisUtterance(text);
+  u.rate=1.02;u.pitch=1;u.volume=1;
+  window.speechSynthesis.speak(u);
+}
+// called from updateSignal() each refresh with the current confirmed state + best model info
+function voiceCommentary(state,confirmed,best,r){
+  if(!voiceOn||!best)return;
+  const spokenState=confirmed?'confirmed':state; // mirrors the visual confirm logic — only announce a REAL confirmed change
+  if(spokenState!==lastSpokenState){
+    if(spokenState==='confirmed')speak(`${best.name} now tracking well. Correlation ${r.rollShiftCorr} percent, direction ${r.rollDirAcc} percent.`);
+    else if(lastSpokenState==='confirmed')speak(`${best.name} signal lost.`);
+    // don't narrate every weak/off flicker — only announce entering/leaving a CONFIRMED good state
+    lastSpokenState=spokenState;
+  }
+  // periodic recap, independent of whether anything changed
+  const barCount=liveData.length;
+  const barsPerCheckin=Math.max(1,Math.round(CHECKIN_EVERY_MIN/currentTF));
+  if(barCount-lastCheckinBarCount>=barsPerCheckin){
+    lastCheckinBarCount=barCount;
+    const statusWord=confirmed?'tracking well':state==='weak'?'mixed':'not reliable right now';
+    speak(`Status check. ${best.name} is ${statusWord}.`);
+  }
+}
+
 window.toggleSelMode=function(){
   selMode=!selMode;
   const b=document.getElementById('btn-selrange');
@@ -1542,6 +1622,7 @@ function updateSignal(best){
     if((nowMs-lastBeepTime)>BEEP_COOLDOWN_MS){beep('good');lastBeepTime=nowMs;}
   }
   lastSignalState=confirmed?'confirmed':state;
+  if(isNewBar)voiceCommentary(state,confirmed,best,r);
 }
 
 function setBox(key,pct,sub){
@@ -1663,10 +1744,26 @@ window.exportAPI=function(){
 const chartArea=document.getElementById('chart-area');
 const cv=document.getElementById('cv');
 const ctx=cv.getContext('2d');
+const cv2=document.getElementById('cv2');
+const ctx2=cv2.getContext('2d');
+let W2=0,H2=0;
 const tip=document.getElementById('tooltip');
 const PAD={L:10,R:72,T:14,B:26};
 
-function resize(){W=chartArea.clientWidth;H=chartArea.clientHeight;cv.width=W;cv.height=H;draw();}
+function resize(){
+  W=chartArea.clientWidth;H=chartArea.clientHeight;
+  const paneL=document.getElementById('pane-left');
+  if(paneL){W=paneL.clientWidth;H=paneL.clientHeight;}
+  cv.width=W;cv.height=H;
+  resizeCompare();
+  draw();
+}
+function resizeCompare(){
+  const paneR=document.getElementById('pane-right');
+  if(!paneR||paneR.style.display==='none')return;
+  W2=paneR.clientWidth;H2=paneR.clientHeight;
+  cv2.width=W2;cv2.height=H2;
+}
 function pxY(v,lo,hi){return PAD.T+(1-(v-lo)/(hi-lo))*(H-PAD.T-PAD.B);}
 function pxX(i,cw){return PAD.L+i*cw+cw/2;}
 window.fitAll=function(){startIdx=0;visCount=Math.max(lvData.length,...fcDataArr.map(f=>f.length));draw();};
@@ -1693,43 +1790,44 @@ window.toggleBB=function(){
   draw();
 };
 
+// Shared math for both the primary chart and the Compare panel — takes the raw resampled arrays
+// and produces the (possibly time-shifted and/or level-offset) slices to draw, for a given window.
+function buildDisplaySlices(doShift,doOffset,sIdx,vCount){
+  const lvSl=lvData.slice(sIdx,sIdx+vCount);
+  const fcSls=fcDataArr.map((f,fi)=>{
+    let out;
+    if(!doShift){
+      out=f.slice(sIdx,sIdx+vCount);
+    }else{
+      const shiftMins=results[fi]&&results[fi].res?results[fi].res.shiftMins:0;
+      const shiftBars=Math.round(shiftMins/currentTF);
+      out=[];
+      for(let i=0;i<vCount;i++){
+        const srcIdx=sIdx+i-shiftBars;
+        out.push(f[srcIdx]||undefined);
+      }
+    }
+    if(doOffset){
+      let firstFc=null,firstLv=null;
+      for(let i=0;i<out.length;i++){if(out[i]){firstFc=out[i].c;break;}}
+      for(let i=0;i<lvSl.length;i++){if(lvSl[i]){firstLv=lvSl[i].c;break;}}
+      if(firstFc!==null&&firstLv!==null){
+        const off=firstLv-firstFc;
+        out=out.map(d=>d?{...d,c:+(d.c+off).toFixed(2)}:d);
+      }
+    }
+    return out;
+  });
+  return{lvSl,fcSls};
+}
+
 function draw(){
   ctx.clearRect(0,0,W,H);ctx.fillStyle='#131722';ctx.fillRect(0,0,W,H);
   const max=Math.max(lvData.length,...fcDataArr.map(f=>f.length));
   if(!max)return;
   if(visCount===0)visCount=max;
   const cw=(W-PAD.L-PAD.R)/visCount;
-  const lvSl=lvData.slice(startIdx,startIdx+visCount);
-  const fcSls=fcDataArr.map((f,fi)=>{
-    let out;
-    if(!shiftAlignMode){
-      out=f.slice(startIdx,startIdx+visCount);
-    }else{
-      const shiftMins=results[fi]&&results[fi].res?results[fi].res.shiftMins:0;
-      const shiftBars=Math.round(shiftMins/currentTF);
-      // pull each displayed bar's value from (idx - shiftBars) in the forecast's own series,
-      // so a leading forecast (shift>0) visually lands later, overlapping where Actual reaches it
-      out=[];
-      for(let i=0;i<visCount;i++){
-        const srcIdx=startIdx+i-shiftBars;
-        out.push(f[srcIdx]||undefined);
-      }
-    }
-    if(offsetAlignMode){
-      // re-center this model's level using the TRUE session start (bar 0), not whatever's first visible
-      // on screen — both series are defined as change-from-9:15-open, so bar 0 is the real, implied zero
-      // they share by construction (Actual's own first plotted bar is ~1min past that, forecast's is exact 0).
-      // Anchoring here instead of to the current scroll position keeps the diagnostic consistent everywhere,
-      // whether you're looking at the full day or zoomed into an afternoon window.
-      const firstFc0=f[0]?f[0].c:null;
-      const firstLv0=lvData[0]?lvData[0].c:null;
-      if(firstFc0!==null&&firstLv0!==null){
-        const off=firstLv0-firstFc0;
-        out=out.map(d=>d?{...d,c:+(d.c+off).toFixed(2)}:d);
-      }
-    }
-    return out;
-  });
+  const{lvSl,fcSls}=buildDisplaySlices(shiftAlignMode,offsetAlignMode,startIdx,visCount);
   const allV=[...lvSl.map(d=>d.c),...fcSls.flatMap(f=>f.filter(d=>d).map(d=>d.c))];
   if(!allV.length)return;
   let lo=Math.min(...allV,0),hi=Math.max(...allV,0);
@@ -1935,6 +2033,68 @@ function draw(){
   const ref=lvData.length?lvData:fcDataArr[0];
   ref.slice(startIdx,startIdx+visCount).forEach((d,i)=>{
     if(i%step===0)ctx.fillText(d.label,pxX(i,cw),H-PAD.B+14);
+  });
+
+  if(viewMode==='compare')drawCompare();
+}
+
+// Lightweight, non-interactive renderer for the Compare panel — always uses the SAME startIdx/visCount
+// as the primary chart (kept in sync automatically since both are driven by draw()), just with
+// shift or offset alignment applied per whatever comparePair is currently selected.
+function drawCompare(){
+  if(!W2||!H2)return;
+  ctx2.clearRect(0,0,W2,H2);ctx2.fillStyle='#131722';ctx2.fillRect(0,0,W2,H2);
+  const max=Math.max(lvData.length,...fcDataArr.map(f=>f.length));
+  if(!max||!visCount)return;
+  const cw2=(W2-PAD.L-PAD.R)/visCount;
+  const doShift=comparePair==='shift',doOffset=comparePair==='offset';
+  const{lvSl,fcSls}=buildDisplaySlices(doShift,doOffset,startIdx,visCount);
+  const allV=[...lvSl.map(d=>d.c),...fcSls.flatMap(f=>f.filter(d=>d).map(d=>d.c))];
+  if(!allV.length)return;
+  let lo=Math.min(...allV,0),hi=Math.max(...allV,0);
+  const pad=Math.max((hi-lo)*0.10,1);lo-=pad;hi+=pad;
+  const pxY2=v=>PAD.T+(1-(v-lo)/(hi-lo))*(H2-PAD.T-PAD.B);
+  const pxX2=i=>PAD.L+i*cw2+cw2/2;
+
+  const gc=Math.min(6,Math.floor(H2/50));
+  for(let i=0;i<=gc;i++){
+    const y=PAD.T+i*(H2-PAD.T-PAD.B)/gc,val=hi-i*(hi-lo)/gc;
+    ctx2.strokeStyle='rgba(128,128,128,0.10)';ctx2.lineWidth=0.5;
+    ctx2.beginPath();ctx2.moveTo(PAD.L,y);ctx2.lineTo(W2-PAD.R,y);ctx2.stroke();
+    ctx2.fillStyle='#555';ctx2.font='10px monospace';ctx2.textAlign='left';
+    ctx2.fillText((val>=0?'+':'')+val.toFixed(1),W2-PAD.R+4,y+4);
+  }
+  // Actual
+  ctx2.strokeStyle='#fff';ctx2.lineWidth=1.75;ctx2.lineJoin='round';ctx2.beginPath();
+  let first=true;
+  lvSl.forEach((d,i)=>{const x=pxX2(i),y=pxY2(d.c);if(first){ctx2.moveTo(x,y);first=false;}else ctx2.lineTo(x,y);});
+  ctx2.stroke();
+  // Forecast lines
+  fcSls.forEach((sl,fi)=>{
+    const col=FORECASTS[fi].color;
+    ctx2.strokeStyle=col;ctx2.lineWidth=1.5;ctx2.lineJoin='round';ctx2.setLineDash([6,3]);
+    ctx2.beginPath();let started=false;
+    sl.forEach((d,i)=>{if(!d)return;const x=pxX2(i),y=pxY2(d.c);if(!started){ctx2.moveTo(x,y);started=true;}else ctx2.lineTo(x,y);});
+    ctx2.stroke();ctx2.setLineDash([]);
+  });
+  // last-value pins (simplified)
+  [[lvSl,'#fff'],...fcSls.map((sl,i)=>[sl,FORECASTS[i].color])].forEach(([sl,col])=>{
+    if(!sl||!sl.length)return;
+    let last=sl[sl.length-1];
+    if(!last){for(let k=sl.length-1;k>=0;k--){if(sl[k]){last=sl[k];break;}}}
+    if(!last)return;
+    const ly=pxY2(last.c);
+    ctx2.fillStyle=col;ctx2.beginPath();ctx2.rect(W2-PAD.R+1,ly-9,PAD.R-3,18);ctx2.fill();
+    ctx2.fillStyle='#000';ctx2.font='bold 9px monospace';ctx2.textAlign='left';
+    ctx2.fillText((last.c>=0?'+':'')+last.c.toFixed(1),W2-PAD.R+4,ly+4);
+  });
+  // x-axis
+  ctx2.fillStyle='#555';ctx2.font='10px monospace';ctx2.textAlign='center';
+  const maxL2=Math.floor((W2-PAD.L-PAD.R)/55);
+  const step2=Math.max(1,Math.floor(visCount/maxL2));
+  const ref2=lvData.length?lvData:fcDataArr[0];
+  ref2.slice(startIdx,startIdx+visCount).forEach((d,i)=>{
+    if(i%step2===0)ctx2.fillText(d.label,pxX2(i),H2-PAD.B+14);
   });
 }
 
