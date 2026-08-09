@@ -91,6 +91,8 @@
   #view-compare.active { background:#607d8b; color:#fff; }
   #shift-banner { display:none; background:#7c4dff; color:#fff; font-size:10px; padding:3px 10px; text-align:center; border-radius:5px; margin-bottom:4px; }
   #offset-banner { display:none; background:#00bcd4; color:#0e1117; font-size:10px; padding:3px 10px; text-align:center; border-radius:5px; margin-bottom:4px; }
+  #both-banner { display:none; background:#ff7043; color:#0e1117; font-size:10px; padding:3px 10px; text-align:center; border-radius:5px; margin-bottom:4px; }
+  #view-both.active { background:#ff7043; color:#0e1117; }
   #compare-banner { display:none; background:#607d8b; color:#fff; font-size:10px; padding:3px 10px; text-align:center; border-radius:5px; margin-bottom:4px; }
   #chart-split { display:flex; flex-direction:row; width:100%; height:100%; gap:4px; }
   .chart-pane { position:relative; flex:1; min-width:0; height:100%; }
@@ -185,10 +187,12 @@
   <button class="btn active" id="view-normal" onclick="setViewMode('normal')">Normal</button>
   <button class="btn" id="view-shift" onclick="setViewMode('shift')" title="Nudges each model's line forward/back in time to overlay Actual — for shape comparison only, not a live prediction">🧲 Shift-Aligned</button>
   <button class="btn" id="view-offset" onclick="setViewMode('offset')" title="Re-centers each model's level to match Actual's starting point — checks if the WAVE RHYTHM matches once the vertical gap is removed">↕ Offset-Aligned</button>
+  <button class="btn" id="view-both" onclick="setViewMode('both')" title="Both TIME shift and LEVEL offset applied together, on one chart">🧲↕ Shift+Offset</button>
   <button class="btn" id="view-compare" onclick="setViewMode('compare')" title="Shows Normal and an aligned view side by side, synced together">⬛⬛ Compare</button>
   <span id="compare-pair-sel" style="display:none">
     <button class="btn active" id="pair-shift" onclick="setComparePair('shift')">Pair: Shift</button>
     <button class="btn" id="pair-offset" onclick="setComparePair('offset')">Pair: Offset</button>
+    <button class="btn" id="pair-both" onclick="setComparePair('both')">Pair: Both</button>
   </span>
   <div class="sep"></div>
   <span id="hover-info"></span>
@@ -197,6 +201,7 @@
 <div id="chart-area">
   <div id="shift-banner">🧲 Shift-Aligned View — model lines nudged in TIME only (to their best-fit lead/lag) to overlay Actual for shape comparison. Not a live prediction — magnitude/error still shown true.</div>
   <div id="offset-banner">↕ Offset-Aligned View — each model's LEVEL snapped to match Actual at whatever point is first visible in your current scroll/zoom (e.g. zoom to 1:10pm → both start together there). Shows whether the RHYTHM matches from that point on, ignoring earlier drift. Real level/error still shown in the metrics table, not here.</div>
+  <div id="both-banner">🧲↕ Shift+Offset View — model lines nudged in TIME (best-fit lead/lag) AND re-centered in LEVEL together, for the closest possible visual overlay. Diagnostic only — real level/error still shown in the metrics table, not here.</div>
   <div id="compare-banner">⬛⬛ Compare View — left is Normal (raw), right is aligned. Scrolling/zooming either side moves both together. Select Range still reads the true, unaligned data.</div>
   <div id="chart-split">
     <div class="chart-pane" id="pane-left">
@@ -238,7 +243,15 @@
     <div class="sim-sub" id="sub-shift">offset</div>
   </div>
   <div class="sim-box" style="border:1px solid #333">
-    <div class="sim-label">🔔 Close to Forecast</div>
+    <div class="sim-label" style="display:flex;justify-content:space-between;align-items:center">
+      <span>🔔 Close to Forecast</span>
+      <select id="sel-rollwin" onchange="setRollWindow(this.value)" style="background:#1a1d29;color:#888;border:1px solid #363a45;border-radius:3px;font-size:9px;padding:1px 2px;font-family:monospace">
+        <option value="10">10m</option>
+        <option value="15" selected>15m</option>
+        <option value="20">20m</option>
+        <option value="30">30m</option>
+      </select>
+    </div>
     <div class="sim-val" id="sim-signal" style="color:#555;font-size:14px">--</div>
     <div class="sim-bar-bg"><div class="sim-bar-fill" id="bar-signal" style="width:0%"></div></div>
     <div class="sim-sub" id="sub-signal">waiting...</div>
@@ -320,7 +333,7 @@ const FORECASTS = [
   {
     name:  'Model A',
     color: '#26a69a',
-    data:  [
+    data:  [0,
 -2.50556826849788,
 16.8556410789788,
 0.683336800495454,
@@ -703,7 +716,7 @@ const FORECASTS = [
     color: '#f0b429',
     // PASTE YOUR MODEL B DATA HERE
     // for now using shifted version of A as demo
-    data: [
+    data: [0,
 0,
 63.51977018057,
 66.5968524730524,
@@ -1149,21 +1162,28 @@ let PRE_OPEN=null,refreshTimer,countdownTimer,cdVal=60;
 let lvData=[],fcDataArr=[],lvMA20=[],lvMA50=[],lvBB=[],fcMA20Arr=[],fcMA50Arr=[],fcBBArr=[];
 let startIdx=0,visCount=0;
 let selMode=false,selDragging=false,selStartBar=null,selEndBar=null;
+let rollWindowMin=15; // trailing window length (minutes) used by the Close to Forecast rolling check
+window.setRollWindow=function(v){
+  rollWindowMin=parseInt(v,10);
+  goodStreak=0; // window length changed — old streak isn't comparable, restart the confirmation count
+  calcAllSim();
+};
 let shiftAlignMode=false,offsetAlignMode=false;
 let viewMode='normal',comparePair='shift';
 window.setViewMode=function(mode){
   viewMode=mode;
-  ['normal','shift','offset','compare'].forEach(m=>document.getElementById('view-'+m).classList.toggle('active',m===mode));
+  ['normal','shift','offset','both','compare'].forEach(m=>document.getElementById('view-'+m).classList.toggle('active',m===mode));
   document.getElementById('shift-banner').style.display=mode==='shift'?'block':'none';
   document.getElementById('offset-banner').style.display=mode==='offset'?'block':'none';
+  document.getElementById('both-banner').style.display=mode==='both'?'block':'none';
   document.getElementById('compare-banner').style.display=mode==='compare'?'block':'none';
   document.getElementById('compare-pair-sel').style.display=mode==='compare'?'inline':'none';
   document.getElementById('pane-right').style.display=mode==='compare'?'block':'none';
   // the LEFT/primary chart: Normal in every mode except when a single-chart aligned view is chosen directly
-  shiftAlignMode=(mode==='shift');
-  offsetAlignMode=(mode==='offset');
+  shiftAlignMode=(mode==='shift'||mode==='both');
+  offsetAlignMode=(mode==='offset'||mode==='both');
   if(mode==='compare'){
-    document.getElementById('pane-right-label').textContent=comparePair==='shift'?'Shift-Aligned':'Offset-Aligned';
+    document.getElementById('pane-right-label').textContent=comparePair==='shift'?'Shift-Aligned':comparePair==='offset'?'Offset-Aligned':'Shift+Offset';
     resizeCompare();
   }
   draw();
@@ -1172,7 +1192,8 @@ window.setComparePair=function(which){
   comparePair=which;
   document.getElementById('pair-shift').classList.toggle('active',which==='shift');
   document.getElementById('pair-offset').classList.toggle('active',which==='offset');
-  document.getElementById('pane-right-label').textContent=which==='shift'?'Shift-Aligned':'Offset-Aligned';
+  document.getElementById('pair-both').classList.toggle('active',which==='both');
+  document.getElementById('pane-right-label').textContent=which==='shift'?'Shift-Aligned':which==='offset'?'Offset-Aligned':'Shift+Offset';
   draw();
 };
 let isDrag=false,dragX=0,dragIdx=0;
@@ -1373,7 +1394,7 @@ function analyse(lv,fc){
   const upAcc=upT?Math.round(upM/upT*100):0;
   const dnAcc=dnT?Math.round(dnM/dnT*100):0;
   // rolling "right now" window — trailing ~15 min, auto-detect best shift within it, then judge on THAT alignment
-  const rw=Math.min(n,Math.max(4,Math.floor(15/currentTF)));
+  const rw=Math.min(n,Math.max(4,Math.floor(rollWindowMin/currentTF)));
   const rax=ax.slice(n-rw),rbx=bx.slice(n-rw);
   const rollCorr=r2p(pearson(rax,rbx)); // unshifted, still shown for reference
   const rMxS=Math.max(1,Math.min(10,Math.floor(rw/3)));
@@ -1615,7 +1636,7 @@ function updateSignal(best){
 
   box.textContent=label;box.style.color=color;
   bar.style.width=Math.max(r.rollShiftCorr,r.rollDirAcc)+'%';bar.style.background=color;
-  sub.textContent=`${best.name} · corr ${r.rollShiftCorr}% · dir ${r.rollDirAcc}% · ${shiftTxt} (last 15m)`+(isNewBar?'':' · ⚠️ no new bar (feed stale/market closed?)');
+  sub.textContent=`${best.name} · corr ${r.rollShiftCorr}% · dir ${r.rollDirAcc}% · ${shiftTxt} (last ${rollWindowMin}m)`+(isNewBar?'':' · ⚠️ no new bar (feed stale/market closed?)');
   const nowMs=Date.now();
   if(confirmed&&lastSignalState!=='confirmed'){
     box.classList.remove('pulse');void box.offsetWidth;box.classList.add('pulse');
@@ -2047,7 +2068,7 @@ function drawCompare(){
   const max=Math.max(lvData.length,...fcDataArr.map(f=>f.length));
   if(!max||!visCount)return;
   const cw2=(W2-PAD.L-PAD.R)/visCount;
-  const doShift=comparePair==='shift',doOffset=comparePair==='offset';
+  const doShift=(comparePair==='shift'||comparePair==='both'),doOffset=(comparePair==='offset'||comparePair==='both');
   const{lvSl,fcSls}=buildDisplaySlices(doShift,doOffset,startIdx,visCount);
   const allV=[...lvSl.map(d=>d.c),...fcSls.flatMap(f=>f.filter(d=>d).map(d=>d.c))];
   if(!allV.length)return;
