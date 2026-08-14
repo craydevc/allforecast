@@ -20,10 +20,10 @@
   /* ── TOPBAR ── */
   #topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; flex-wrap:wrap; gap:5px; flex-shrink:0; }
   #topbar h1 { font-size:13px; color:#fff; font-weight:700; }
-  #status { font-size:10px; color:#555; }
-  #userbar { display:flex; align-items:center; gap:8px; font-size:10px; color:#555; }
+  #status { font-size:10px; color:#8b93a6; }
+  #userbar { display:flex; align-items:center; gap:8px; font-size:10px; color:#8b93a6; }
   #userbar span { color:#26a69a; }
-  .out-btn { padding:3px 10px; background:#2a2d3a; color:#555; border:1px solid #363a45; border-radius:3px; cursor:pointer; font-family:monospace; font-size:10px; }
+  .out-btn { padding:3px 10px; background:#2a2d3a; color:#8b93a6; border:1px solid #363a45; border-radius:3px; cursor:pointer; font-family:monospace; font-size:10px; }
   .out-btn:hover { color:#ef5350; border-color:#ef535044; }
 
   /* ── TOOLBAR ── */
@@ -43,20 +43,20 @@
   /* ── SIM PANEL ── */
   #sim-panel { flex-shrink:0; margin-bottom:6px; background:#131722; border-radius:7px; border:1px solid #1e222d; padding:6px 10px; display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
   .sim-box { display:flex; flex-direction:column; gap:2px; }
-  .sim-label { font-size:9px; color:#555; text-transform:uppercase; letter-spacing:0.5px; }
+  .sim-label { font-size:9px; color:#8b93a6; text-transform:uppercase; letter-spacing:0.5px; }
   .sim-val { font-size:16px; font-weight:700; }
   .sim-bar-bg { height:3px; background:#1e222d; border-radius:2px; overflow:hidden; }
   .sim-bar-fill { height:100%; border-radius:2px; transition:width 0.6s,background 0.6s; }
-  .sim-sub { font-size:9px; color:#555; }
+  .sim-sub { font-size:9px; color:#8b93a6; }
 
   /* ── COMPARISON TABLE ── */
   #analysis { background:#131722; border-radius:8px; border:1px solid #1e222d; padding:8px; }
-  .tbl-title { font-size:9px; color:#555; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+  .tbl-title { font-size:9px; color:#8b93a6; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
   table { width:100%; border-collapse:collapse; font-size:11px; }
-  th { background:#0e1117; color:#555; font-size:9px; text-transform:uppercase; letter-spacing:0.5px; padding:5px 8px; text-align:center; border-bottom:1px solid #1e222d; position:sticky; top:0; z-index:5; }
+  th { background:#0e1117; color:#8b93a6; font-size:9px; text-transform:uppercase; letter-spacing:0.5px; padding:5px 8px; text-align:center; border-bottom:1px solid #1e222d; position:sticky; top:0; z-index:5; }
   th:first-child { text-align:left; }
   td { padding:4px 8px; border-bottom:1px solid #0e111766; text-align:center; }
-  td:first-child { text-align:left; color:#555; font-size:10px; }
+  td:first-child { text-align:left; color:#8b93a6; font-size:10px; }
   tr:hover td { background:#131722cc; }
   .winner { background:#26a69a0a !important; }
   .best { font-weight:700; }
@@ -66,7 +66,7 @@
   .grp td { color:#363a45; font-size:9px; letter-spacing:1px; padding:7px 8px 3px; background:#0e1117; }
 
   /* ── FOOTER ── */
-  #footer { display:flex; justify-content:space-between; font-size:10px; color:#555; margin-top:5px; flex-wrap:wrap; gap:3px; flex-shrink:0; }
+  #footer { display:flex; justify-content:space-between; font-size:10px; color:#8b93a6; margin-top:5px; flex-wrap:wrap; gap:3px; flex-shrink:0; }
   #legend { display:flex; gap:10px; flex-wrap:wrap; }
   .leg { display:flex; align-items:center; gap:4px; }
   .leg-line { width:16px; height:2px; border-radius:1px; }
@@ -75,7 +75,7 @@
   /* ── ACCESS DENIED ── */
   #access-denied { display:none; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; gap:14px; text-align:center; padding:20px; }
   #access-denied h2 { font-size:16px; color:#fff; }
-  #access-denied p { font-size:11px; color:#555; max-width:300px; line-height:1.7; }
+  #access-denied p { font-size:11px; color:#8b93a6; max-width:300px; line-height:1.7; }
   .upi-box { background:#131722; border:1px solid #1e222d; border-radius:8px; padding:18px 24px; display:flex; flex-direction:column; gap:10px; max-width:280px; width:100%; }
   .upi-val { font-size:13px; color:#26a69a; font-weight:700; text-align:center; padding:8px; background:#26a69a11; border:1px solid #26a69a33; border-radius:5px; }
   .wa-btn { padding:8px; background:#25d36622; color:#25d366; border:1px solid #25d36644; border-radius:5px; text-align:center; text-decoration:none; font-size:11px; }
@@ -95,6 +95,10 @@
   #view-both.active { background:#ff7043; color:#0e1117; }
   #compare-banner { display:none; background:#607d8b; color:#fff; font-size:10px; padding:3px 10px; text-align:center; border-radius:5px; margin-bottom:4px; }
   #chart-split { display:flex; flex-direction:row; width:100%; height:100%; gap:4px; }
+  #quad-grid { display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; width:100%; height:100%; gap:4px; }
+  #quad-grid .chart-pane { border:1px solid #1e222d; border-radius:4px; }
+  #quad-banner { display:none; background:#455a64; color:#fff; font-size:10px; padding:3px 10px; text-align:center; border-radius:5px; margin-bottom:4px; }
+  #view-quad.active { background:#455a64; color:#fff; }
   .chart-pane { position:relative; flex:1; min-width:0; height:100%; }
   .chart-pane canvas { width:100%; height:100%; display:block; }
   .pane-label { position:absolute; top:4px; left:8px; font-size:10px; color:#888; background:#131722cc; padding:1px 6px; border-radius:3px; z-index:2; }
@@ -104,6 +108,16 @@
   #range-result .rr-row { display:flex; gap:14px; flex-wrap:wrap; margin-top:3px; }
   #range-result .rr-model { min-width:150px; }
   #range-result .rr-metric { display:inline-block; margin-right:10px; }
+  #signal-log-panel { flex-shrink:0; margin-bottom:6px; background:#131722; border-radius:7px; border:1px solid #1e222d; padding:6px 10px; max-height:180px; display:flex; flex-direction:column; }
+  #signal-log-header { display:flex; justify-content:space-between; font-size:10px; color:#8b93a6; margin-bottom:4px; }
+  #signal-log-clear { cursor:pointer; }
+  #signal-log-clear:hover { color:#ef5350; }
+  #signal-log-scroll { overflow-y:auto; }
+  #signal-log-table { width:100%; border-collapse:collapse; font-size:10px; font-family:monospace; }
+  #signal-log-table th { text-align:left; color:#8b93a6; padding:2px 6px; border-bottom:1px solid #1e222d; position:sticky; top:0; background:#131722; }
+  #signal-log-table td { padding:2px 6px; color:#d1d4dc; border-bottom:1px solid #1e222d22; }
+  #signal-log-table tr.ongoing td { color:#26a69a; }
+  #signal-log-empty { font-size:10px; color:#8b93a6; padding:6px 0; text-align:center; }
 </style>
 </head>
 <body>
@@ -117,14 +131,14 @@
     but your subscription is not active yet.
   </p>
   <div class="upi-box">
-    <div style="font-size:11px;color:#555;">To activate your account:</div>
+    <div style="font-size:11px;color:#8b93a6;">To activate your account:</div>
     <div style="font-size:11px;color:#d1d4dc;line-height:1.9;">
       1. Choose your plan below<br>
       2. Pay via UPI<br>
       3. Send screenshot on WhatsApp<br>
       4. Access activated within 1 hour ✅
     </div>
-    <div style="font-size:11px;color:#555;text-align:center;">
+    <div style="font-size:11px;color:#8b93a6;text-align:center;">
       Basic ₹999/mo · Premium ₹2,499/mo
     </div>
     <div class="upi-val">UPI: craydevc@okicici</div>
@@ -189,6 +203,7 @@
   <button class="btn" id="view-offset" onclick="setViewMode('offset')" title="Re-centers each model's level to match Actual's starting point — checks if the WAVE RHYTHM matches once the vertical gap is removed">↕ Offset-Aligned</button>
   <button class="btn" id="view-both" onclick="setViewMode('both')" title="Both TIME shift and LEVEL offset applied together, on one chart">🧲↕ Shift+Offset</button>
   <button class="btn" id="view-compare" onclick="setViewMode('compare')" title="Shows Normal and an aligned view side by side, synced together">⬛⬛ Compare</button>
+  <button class="btn" id="view-quad" onclick="setViewMode('quad')" title="All four views at once, synced together">▦ Quad</button>
   <span id="compare-pair-sel" style="display:none">
     <button class="btn active" id="pair-shift" onclick="setComparePair('shift')">Pair: Shift</button>
     <button class="btn" id="pair-offset" onclick="setComparePair('offset')">Pair: Offset</button>
@@ -203,6 +218,7 @@
   <div id="offset-banner">↕ Offset-Aligned View — each model's LEVEL snapped to match Actual at whatever point is first visible in your current scroll/zoom (e.g. zoom to 1:10pm → both start together there). Shows whether the RHYTHM matches from that point on, ignoring earlier drift. Real level/error still shown in the metrics table, not here.</div>
   <div id="both-banner">🧲↕ Shift+Offset View — model lines nudged in TIME (best-fit lead/lag) AND re-centered in LEVEL together, for the closest possible visual overlay. Diagnostic only — real level/error still shown in the metrics table, not here.</div>
   <div id="compare-banner">⬛⬛ Compare View — left is Normal (raw), right is aligned. Scrolling/zooming either side moves both together. Select Range still reads the true, unaligned data.</div>
+  <div id="quad-banner">▦ Quad View — all four looks at once: Normal, Shift-Aligned, Offset-Aligned, Shift+Offset. All synced to the same window. Select Range still reads the true, unaligned data.</div>
   <div id="chart-split">
     <div class="chart-pane" id="pane-left">
       <canvas id="cv"></canvas>
@@ -213,6 +229,12 @@
       <canvas id="cv2"></canvas>
     </div>
   </div>
+  <div id="quad-grid" style="display:none">
+    <div class="chart-pane"><canvas id="qcv1"></canvas></div>
+    <div class="chart-pane"><canvas id="qcv2"></canvas></div>
+    <div class="chart-pane"><canvas id="qcv3"></canvas></div>
+    <div class="chart-pane"><canvas id="qcv4"></canvas></div>
+  </div>
 </div>
 
 <div id="range-result" style="display:none"></div>
@@ -220,19 +242,19 @@
 <div id="sim-panel">
   <div class="sim-box">
     <div class="sim-label">From Open</div>
-    <div class="sim-val" id="sim-full" style="color:#555">--%</div>
+    <div class="sim-val" id="sim-full" style="color:#8b93a6">--%</div>
     <div class="sim-bar-bg"><div class="sim-bar-fill" id="bar-full" style="width:0%"></div></div>
     <div class="sim-sub" id="sub-full">waiting...</div>
   </div>
   <div class="sim-box">
     <div class="sim-label">Last 30 min</div>
-    <div class="sim-val" id="sim-30" style="color:#555">--%</div>
+    <div class="sim-val" id="sim-30" style="color:#8b93a6">--%</div>
     <div class="sim-bar-bg"><div class="sim-bar-fill" id="bar-30" style="width:0%"></div></div>
     <div class="sim-sub" id="sub-30">waiting...</div>
   </div>
   <div class="sim-box">
     <div class="sim-label">Last 15 min</div>
-    <div class="sim-val" id="sim-15" style="color:#555">--%</div>
+    <div class="sim-val" id="sim-15" style="color:#8b93a6">--%</div>
     <div class="sim-bar-bg"><div class="sim-bar-fill" id="bar-15" style="width:0%"></div></div>
     <div class="sim-sub" id="sub-15">waiting...</div>
   </div>
@@ -252,9 +274,25 @@
         <option value="30">30m</option>
       </select>
     </div>
-    <div class="sim-val" id="sim-signal" style="color:#555;font-size:14px">--</div>
+    <div class="sim-val" id="sim-signal" style="color:#8b93a6;font-size:14px">--</div>
     <div class="sim-bar-bg"><div class="sim-bar-fill" id="bar-signal" style="width:0%"></div></div>
     <div class="sim-sub" id="sub-signal">waiting...</div>
+  </div>
+</div>
+
+<div id="signal-log-panel">
+  <div id="signal-log-header">
+    <span>📋 Signal Log — today</span>
+    <span id="signal-log-clear" onclick="clearSignalLog()">✕ clear</span>
+  </div>
+  <div id="signal-log-scroll">
+    <table id="signal-log-table">
+      <thead><tr>
+        <th>Time</th><th>Model</th><th>Corr@0</th><th>Dir@0</th><th>Corr@shift</th><th>Dir@shift</th><th>Shift</th><th>Held for</th><th>Status</th>
+      </tr></thead>
+      <tbody id="signal-log-body"></tbody>
+    </table>
+    <div id="signal-log-empty">No confirmed signals yet today.</div>
   </div>
 </div>
 
@@ -331,10 +369,9 @@ window.doLogout = async () => {
 // ============================================================
 const FORECASTS = [
   {
-    name:  'Model A:14 Aug-2026',
+    name:  'Model A: 14 Aug 2026 software update',
     color: '#26a69a',
-    data:  [0,
-25.6108183932629,
+    data:  [25.6108183932629,
 46.1436296913053,
 15.8963700371933,
 7.94818501859845,
@@ -796,12 +833,15 @@ let shiftAlignMode=false,offsetAlignMode=false;
 let viewMode='normal',comparePair='shift';
 window.setViewMode=function(mode){
   viewMode=mode;
-  ['normal','shift','offset','both','compare'].forEach(m=>document.getElementById('view-'+m).classList.toggle('active',m===mode));
+  ['normal','shift','offset','both','compare','quad'].forEach(m=>document.getElementById('view-'+m).classList.toggle('active',m===mode));
   document.getElementById('shift-banner').style.display=mode==='shift'?'block':'none';
   document.getElementById('offset-banner').style.display=mode==='offset'?'block':'none';
   document.getElementById('both-banner').style.display=mode==='both'?'block':'none';
   document.getElementById('compare-banner').style.display=mode==='compare'?'block':'none';
+  document.getElementById('quad-banner').style.display=mode==='quad'?'block':'none';
   document.getElementById('compare-pair-sel').style.display=mode==='compare'?'inline':'none';
+  document.getElementById('chart-split').style.display=mode==='quad'?'none':'flex';
+  document.getElementById('quad-grid').style.display=mode==='quad'?'grid':'none';
   document.getElementById('pane-right').style.display=mode==='compare'?'block':'none';
   // the LEFT/primary chart: Normal in every mode except when a single-chart aligned view is chosen directly
   shiftAlignMode=(mode==='shift'||mode==='both');
@@ -810,6 +850,7 @@ window.setViewMode=function(mode){
     document.getElementById('pane-right-label').textContent=comparePair==='shift'?'Shift-Aligned':comparePair==='offset'?'Offset-Aligned':'Shift+Offset';
     resizeCompare();
   }
+  if(mode==='quad')resizeQuad();
   draw();
 };
 window.setComparePair=function(which){
@@ -830,6 +871,7 @@ function initDashboard(){
   buildLegend();
   buildAll();
   resize();
+  loadSignalLog();
   setSource('live');
 }
 
@@ -1021,6 +1063,12 @@ function analyse(lv,fc){
   const rw=Math.min(n,Math.max(4,Math.floor(rollWindowMin/currentTF)));
   const rax=ax.slice(n-rw),rbx=bx.slice(n-rw);
   const rollCorr=r2p(pearson(rax,rbx)); // unshifted, still shown for reference
+  let rDirT0=0,rDirM0=0;
+  for(let i=1;i<rax.length;i++){
+    const ld=rax[i]-rax[i-1],fd=rbx[i]-rbx[i-1];
+    rDirT0++;if((ld>=0&&fd>=0)||(ld<0&&fd<0))rDirM0++;
+  }
+  const rollDirAcc0=rDirT0?Math.round(rDirM0/rDirT0*100):0; // unshifted direction — for log comparison only, not the live signal decision
   const rMxS=Math.max(1,Math.min(10,Math.floor(rw/3)));
   let rBestS=0,rBestR=-2;
   for(let sh=-rMxS;sh<=rMxS;sh++){
@@ -1075,7 +1123,7 @@ function analyse(lv,fc){
   const trendMatch=(ax[n-1]>=ax[0])===(bx[n-1]>=bx[0]);
   // composite
   const score=Math.round(corrFull*0.20+corr30*0.15+corr15*0.10+dirAcc*0.15+within10*0.10+corrMorn*0.10+corrAftn*0.10+hiAcc*0.05+loAcc*0.05);
-  return{corrFull,corr60,corr30,corr15,corr5,bestWin,worstWin,dirAcc,upAcc,dnAcc,maxStreak,curStreak,mae,maxErr,within5,within10,within20,shiftMins,shiftLabel,corrMorn,corrAftn,trendMatch,peakOk,troughOk,peakDiff,troughDiff,hiAcc,loAcc,eodAcc,score,rollCorr,rollDirAcc,rollShiftCorr,rollShiftMins};
+  return{corrFull,corr60,corr30,corr15,corr5,bestWin,worstWin,dirAcc,upAcc,dnAcc,maxStreak,curStreak,mae,maxErr,within5,within10,within20,shiftMins,shiftLabel,corrMorn,corrAftn,trendMatch,peakOk,troughOk,peakDiff,troughDiff,hiAcc,loAcc,eodAcc,score,rollCorr,rollDirAcc,rollShiftCorr,rollShiftMins,rollDirAcc0};
 }
 
 let results=[];
@@ -1238,9 +1286,86 @@ function runRangeAnalysis(){
   panel.innerHTML=`<div class="rr-title"><span>Selected window: ${labelStart} → ${labelEnd} (${e-s+1} bars)</span><span class="rr-close" onclick="clearRangeResult()">✕ clear</span></div><div class="rr-row">${rows}</div>`;
 }
 
+// ============================================================
+// SIGNAL LOG — records every confirmed "tracking well" event with both the naive (@0) and
+// shift-corrected numbers side by side, and tracks how long it held before dropping out.
+// Persisted to localStorage for the current trading day only — resets automatically the next day.
+// ============================================================
+let signalLog=[],ongoingLogEntry=null;
+function todayKey(){
+  // uses the device date as the storage boundary — matches "one trading day" (~375-385 min), not real history
+  const d=new Date();
+  return `huntfarm_signal_log_${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function loadSignalLog(){
+  try{
+    const raw=localStorage.getItem(todayKey());
+    if(raw){
+      const parsed=JSON.parse(raw);
+      signalLog=parsed.filter(e=>e.status==='ended'); // drop any entry that was still "ongoing" at last save — stale after a reload
+      renderSignalLog();
+    }
+  }catch(e){console.warn('signal log load failed',e);}
+}
+function saveSignalLog(){
+  try{localStorage.setItem(todayKey(),JSON.stringify(signalLog));}catch(e){console.warn('signal log save failed',e);}
+}
+function startSignalLogEntry(best,r){
+  const timeLabel=(lvData[lvData.length-1]||{}).label||'?';
+  ongoingLogEntry={
+    model:best.name,
+    time:timeLabel,
+    corr0:r.rollCorr,dir0:r.rollDirAcc0,
+    corrShift:r.rollShiftCorr,dirShift:r.rollDirAcc,
+    shiftMins:r.rollShiftMins,
+    startedAtMs:Date.now(),
+    status:'ongoing'
+  };
+  signalLog.unshift(ongoingLogEntry);
+  renderSignalLog();
+  saveSignalLog();
+}
+function updateOngoingSignalLogEntry(){
+  if(!ongoingLogEntry)return;
+  renderSignalLog(); // just refreshes the live "held for" text on the ongoing row
+}
+function endSignalLogEntry(){
+  if(!ongoingLogEntry)return;
+  const heldMin=Math.max(1,Math.round((Date.now()-ongoingLogEntry.startedAtMs)/60000));
+  ongoingLogEntry.heldMin=heldMin;
+  ongoingLogEntry.status='ended';
+  ongoingLogEntry=null;
+  renderSignalLog();
+  saveSignalLog();
+}
+window.clearSignalLog=function(){
+  signalLog=[];ongoingLogEntry=null;
+  try{localStorage.removeItem(todayKey());}catch(e){}
+  renderSignalLog();
+};
+function renderSignalLog(){
+  const body=document.getElementById('signal-log-body');
+  const empty=document.getElementById('signal-log-empty');
+  if(!body)return;
+  if(!signalLog.length){body.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  body.innerHTML=signalLog.map(e=>{
+    const isOngoing=e.status==='ongoing';
+    const heldTxt=isOngoing?Math.max(1,Math.round((Date.now()-e.startedAtMs)/60000))+'m so far…':e.heldMin+'m';
+    const statusTxt=isOngoing?'ongoing':'ended';
+    const shiftTxt=e.shiftMins===0?'sync':e.shiftMins>0?`+${e.shiftMins}m`:`${e.shiftMins}m`;
+    return `<tr class="${isOngoing?'ongoing':''}">
+      <td>${e.time}</td><td>${e.model}</td>
+      <td>${e.corr0}%</td><td>${e.dir0}%</td>
+      <td>${e.corrShift}%</td><td>${e.dirShift}%</td>
+      <td>${shiftTxt}</td><td>${heldTxt}</td><td>${statusTxt}</td>
+    </tr>`;
+  }).join('');
+}
+
 function updateSignal(best){
   const box=document.getElementById('sim-signal'),sub=document.getElementById('sub-signal'),bar=document.getElementById('bar-signal');
-  if(!best||!best.res){box.textContent='--';box.style.color='#555';sub.textContent='waiting...';goodStreak=0;return;}
+  if(!best||!best.res){box.textContent='--';box.style.color='#8b93a6';sub.textContent='waiting...';goodStreak=0;return;}
   const r=best.res;
   let state,color,label;
   if(r.rollShiftCorr>=70&&r.rollDirAcc>=60){state='good';color='#26a69a';label='✅ TRACKING WELL';}
@@ -1262,10 +1387,15 @@ function updateSignal(best){
   bar.style.width=Math.max(r.rollShiftCorr,r.rollDirAcc)+'%';bar.style.background=color;
   sub.textContent=`${best.name} · corr ${r.rollShiftCorr}% · dir ${r.rollDirAcc}% · ${shiftTxt} (last ${rollWindowMin}m)`+(isNewBar?'':' · ⚠️ no new bar (feed stale/market closed?)');
   const nowMs=Date.now();
-  if(confirmed&&lastSignalState!=='confirmed'){
+  const wasConfirmed=(lastSignalState==='confirmed');
+  if(confirmed&&!wasConfirmed){
     box.classList.remove('pulse');void box.offsetWidth;box.classList.add('pulse');
     if((nowMs-lastBeepTime)>BEEP_COOLDOWN_MS){beep('good');lastBeepTime=nowMs;}
+    startSignalLogEntry(best,r);
+  }else if(!confirmed&&wasConfirmed){
+    endSignalLogEntry();
   }
+  if(confirmed)updateOngoingSignalLogEntry();
   lastSignalState=confirmed?'confirmed':state;
   if(isNewBar)voiceCommentary(state,confirmed,best,r);
 }
@@ -1392,6 +1522,9 @@ const ctx=cv.getContext('2d');
 const cv2=document.getElementById('cv2');
 const ctx2=cv2.getContext('2d');
 let W2=0,H2=0;
+const qcv1=document.getElementById('qcv1'),qcv2=document.getElementById('qcv2'),qcv3=document.getElementById('qcv3'),qcv4=document.getElementById('qcv4');
+const qctx1=qcv1.getContext('2d'),qctx2=qcv2.getContext('2d'),qctx3=qcv3.getContext('2d'),qctx4=qcv4.getContext('2d');
+let QW=0,QH=0;
 const tip=document.getElementById('tooltip');
 const PAD={L:10,R:72,T:14,B:26};
 
@@ -1401,6 +1534,7 @@ function resize(){
   if(paneL){W=paneL.clientWidth;H=paneL.clientHeight;}
   cv.width=W;cv.height=H;
   resizeCompare();
+  resizeQuad();
   draw();
 }
 function resizeCompare(){
@@ -1408,6 +1542,13 @@ function resizeCompare(){
   if(!paneR||paneR.style.display==='none')return;
   W2=paneR.clientWidth;H2=paneR.clientHeight;
   cv2.width=W2;cv2.height=H2;
+}
+function resizeQuad(){
+  const grid=document.getElementById('quad-grid');
+  if(!grid||grid.style.display==='none')return;
+  const q1pane=qcv1.parentElement;
+  QW=q1pane.clientWidth;QH=q1pane.clientHeight;
+  [qcv1,qcv2,qcv3,qcv4].forEach(c=>{c.width=QW;c.height=QH;});
 }
 function pxY(v,lo,hi){return PAD.T+(1-(v-lo)/(hi-lo))*(H-PAD.T-PAD.B);}
 function pxX(i,cw){return PAD.L+i*cw+cw/2;}
@@ -1484,7 +1625,7 @@ function draw(){
     const y=PAD.T+i*(H-PAD.T-PAD.B)/gc,val=hi-i*(hi-lo)/gc;
     ctx.strokeStyle='rgba(128,128,128,0.10)';ctx.lineWidth=0.5;
     ctx.beginPath();ctx.moveTo(PAD.L,y);ctx.lineTo(W-PAD.R,y);ctx.stroke();
-    ctx.fillStyle='#555';ctx.font='10px monospace';ctx.textAlign='left';
+    ctx.fillStyle='#8b93a6';ctx.font='10px monospace';ctx.textAlign='left';
     ctx.fillText((val>=0?'+':'')+val.toFixed(1),W-PAD.R+4,y+4);
   }
 
@@ -1647,7 +1788,7 @@ function draw(){
       const d=sl[i];if(!d)return;
       const diff=lv2?+(lv2.c-d.c).toFixed(2):null;
       html+=`<br><span style="color:${FORECASTS[fi].color}">- ${FORECASTS[fi].name}: ${s(d.c)}</span>`;
-      if(diff!==null)html+=`<span style="color:#555"> Δ${s(diff)}</span>`;
+      if(diff!==null)html+=`<span style="color:#8b93a6"> Δ${s(diff)}</span>`;
     });
     tip.innerHTML=html;
     tip.style.left=(mouseX+14+200>W?mouseX-220:mouseX+14)+'px';
@@ -1672,7 +1813,7 @@ function draw(){
   });
 
   // x-axis
-  ctx.fillStyle='#555';ctx.font='10px monospace';ctx.textAlign='center';
+  ctx.fillStyle='#8b93a6';ctx.font='10px monospace';ctx.textAlign='center';
   const maxL=Math.floor((W-PAD.L-PAD.R)/55);
   const step=Math.max(1,Math.floor(visCount/maxL));
   const ref=lvData.length?lvData:fcDataArr[0];
@@ -1681,46 +1822,49 @@ function draw(){
   });
 
   if(viewMode==='compare')drawCompare();
+  if(viewMode==='quad')drawQuad();
 }
 
 // Lightweight, non-interactive renderer for the Compare panel — always uses the SAME startIdx/visCount
 // as the primary chart (kept in sync automatically since both are driven by draw()), just with
 // shift or offset alignment applied per whatever comparePair is currently selected.
-function drawCompare(){
-  if(!W2||!H2)return;
-  ctx2.clearRect(0,0,W2,H2);ctx2.fillStyle='#131722';ctx2.fillRect(0,0,W2,H2);
+// Generalized lightweight renderer — draws one non-interactive reference chart into any given
+// canvas context, with whichever shift/offset combination is requested. Used by both the 2-up
+// Compare panel and the 4-up Quad grid, so the drawing logic only exists in one place.
+function drawIntoPane(pctx,pW,pH,doShift,doOffset,paneLabel){
+  if(!pW||!pH)return;
+  pctx.clearRect(0,0,pW,pH);pctx.fillStyle='#131722';pctx.fillRect(0,0,pW,pH);
   const max=Math.max(lvData.length,...fcDataArr.map(f=>f.length));
   if(!max||!visCount)return;
-  const cw2=(W2-PAD.L-PAD.R)/visCount;
-  const doShift=(comparePair==='shift'||comparePair==='both'),doOffset=(comparePair==='offset'||comparePair==='both');
+  const cwP=(pW-PAD.L-PAD.R)/visCount;
   const{lvSl,fcSls}=buildDisplaySlices(doShift,doOffset,startIdx,visCount);
   const allV=[...lvSl.map(d=>d.c),...fcSls.flatMap(f=>f.filter(d=>d).map(d=>d.c))];
   if(!allV.length)return;
   let lo=Math.min(...allV,0),hi=Math.max(...allV,0);
   const pad=Math.max((hi-lo)*0.10,1);lo-=pad;hi+=pad;
-  const pxY2=v=>PAD.T+(1-(v-lo)/(hi-lo))*(H2-PAD.T-PAD.B);
-  const pxX2=i=>PAD.L+i*cw2+cw2/2;
+  const pxYp=v=>PAD.T+(1-(v-lo)/(hi-lo))*(pH-PAD.T-PAD.B);
+  const pxXp=i=>PAD.L+i*cwP+cwP/2;
 
-  const gc=Math.min(6,Math.floor(H2/50));
+  const gc=Math.min(6,Math.floor(pH/50));
   for(let i=0;i<=gc;i++){
-    const y=PAD.T+i*(H2-PAD.T-PAD.B)/gc,val=hi-i*(hi-lo)/gc;
-    ctx2.strokeStyle='rgba(128,128,128,0.10)';ctx2.lineWidth=0.5;
-    ctx2.beginPath();ctx2.moveTo(PAD.L,y);ctx2.lineTo(W2-PAD.R,y);ctx2.stroke();
-    ctx2.fillStyle='#555';ctx2.font='10px monospace';ctx2.textAlign='left';
-    ctx2.fillText((val>=0?'+':'')+val.toFixed(1),W2-PAD.R+4,y+4);
+    const y=PAD.T+i*(pH-PAD.T-PAD.B)/gc,val=hi-i*(hi-lo)/gc;
+    pctx.strokeStyle='rgba(128,128,128,0.10)';pctx.lineWidth=0.5;
+    pctx.beginPath();pctx.moveTo(PAD.L,y);pctx.lineTo(pW-PAD.R,y);pctx.stroke();
+    pctx.fillStyle='#8b93a6';pctx.font='10px monospace';pctx.textAlign='left';
+    pctx.fillText((val>=0?'+':'')+val.toFixed(1),pW-PAD.R+4,y+4);
   }
   // Actual
-  ctx2.strokeStyle='#fff';ctx2.lineWidth=1.75;ctx2.lineJoin='round';ctx2.beginPath();
+  pctx.strokeStyle='#fff';pctx.lineWidth=1.75;pctx.lineJoin='round';pctx.beginPath();
   let first=true;
-  lvSl.forEach((d,i)=>{const x=pxX2(i),y=pxY2(d.c);if(first){ctx2.moveTo(x,y);first=false;}else ctx2.lineTo(x,y);});
-  ctx2.stroke();
+  lvSl.forEach((d,i)=>{const x=pxXp(i),y=pxYp(d.c);if(first){pctx.moveTo(x,y);first=false;}else pctx.lineTo(x,y);});
+  pctx.stroke();
   // Forecast lines
   fcSls.forEach((sl,fi)=>{
     const col=FORECASTS[fi].color;
-    ctx2.strokeStyle=col;ctx2.lineWidth=1.5;ctx2.lineJoin='round';ctx2.setLineDash([6,3]);
-    ctx2.beginPath();let started=false;
-    sl.forEach((d,i)=>{if(!d)return;const x=pxX2(i),y=pxY2(d.c);if(!started){ctx2.moveTo(x,y);started=true;}else ctx2.lineTo(x,y);});
-    ctx2.stroke();ctx2.setLineDash([]);
+    pctx.strokeStyle=col;pctx.lineWidth=1.5;pctx.lineJoin='round';pctx.setLineDash([6,3]);
+    pctx.beginPath();let started=false;
+    sl.forEach((d,i)=>{if(!d)return;const x=pxXp(i),y=pxYp(d.c);if(!started){pctx.moveTo(x,y);started=true;}else pctx.lineTo(x,y);});
+    pctx.stroke();pctx.setLineDash([]);
   });
   // last-value pins (simplified)
   [[lvSl,'#fff'],...fcSls.map((sl,i)=>[sl,FORECASTS[i].color])].forEach(([sl,col])=>{
@@ -1728,19 +1872,34 @@ function drawCompare(){
     let last=sl[sl.length-1];
     if(!last){for(let k=sl.length-1;k>=0;k--){if(sl[k]){last=sl[k];break;}}}
     if(!last)return;
-    const ly=pxY2(last.c);
-    ctx2.fillStyle=col;ctx2.beginPath();ctx2.rect(W2-PAD.R+1,ly-9,PAD.R-3,18);ctx2.fill();
-    ctx2.fillStyle='#000';ctx2.font='bold 9px monospace';ctx2.textAlign='left';
-    ctx2.fillText((last.c>=0?'+':'')+last.c.toFixed(1),W2-PAD.R+4,ly+4);
+    const ly=pxYp(last.c);
+    pctx.fillStyle=col;pctx.beginPath();pctx.rect(pW-PAD.R+1,ly-9,PAD.R-3,18);pctx.fill();
+    pctx.fillStyle='#000';pctx.font='bold 9px monospace';pctx.textAlign='left';
+    pctx.fillText((last.c>=0?'+':'')+last.c.toFixed(1),pW-PAD.R+4,ly+4);
   });
   // x-axis
-  ctx2.fillStyle='#555';ctx2.font='10px monospace';ctx2.textAlign='center';
-  const maxL2=Math.floor((W2-PAD.L-PAD.R)/55);
-  const step2=Math.max(1,Math.floor(visCount/maxL2));
-  const ref2=lvData.length?lvData:fcDataArr[0];
-  ref2.slice(startIdx,startIdx+visCount).forEach((d,i)=>{
-    if(i%step2===0)ctx2.fillText(d.label,pxX2(i),H2-PAD.B+14);
+  pctx.fillStyle='#8b93a6';pctx.font='10px monospace';pctx.textAlign='center';
+  const maxLp=Math.floor((pW-PAD.L-PAD.R)/55);
+  const stepP=Math.max(1,Math.floor(visCount/maxLp));
+  const refP=lvData.length?lvData:fcDataArr[0];
+  refP.slice(startIdx,startIdx+visCount).forEach((d,i)=>{
+    if(i%stepP===0)pctx.fillText(d.label,pxXp(i),pH-PAD.B+14);
   });
+  // pane label, top-left
+  if(paneLabel){
+    pctx.fillStyle='#8b93a6';pctx.font='bold 9px monospace';pctx.textAlign='left';
+    pctx.fillText(paneLabel,PAD.L+2,PAD.T-2);
+  }
+}
+function drawCompare(){
+  const doShift=(comparePair==='shift'||comparePair==='both'),doOffset=(comparePair==='offset'||comparePair==='both');
+  drawIntoPane(ctx2,W2,H2,doShift,doOffset,null);
+}
+function drawQuad(){
+  drawIntoPane(qctx1,QW,QH,false,false,'Normal');
+  drawIntoPane(qctx2,QW,QH,true,false,'Shift-Aligned');
+  drawIntoPane(qctx3,QW,QH,false,true,'Offset-Aligned');
+  drawIntoPane(qctx4,QW,QH,true,true,'Shift+Offset');
 }
 
 // ============================================================
