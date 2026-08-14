@@ -369,7 +369,7 @@ window.doLogout = async () => {
 // ============================================================
 const FORECASTS = [
   {
-    name:  'Model A: 14 Aug 2026 software update',
+    name:  'Model A',
     color: '#26a69a',
     data:  [25.6108183932629,
 46.1436296913053,
@@ -899,6 +899,7 @@ window.setPreOpen=function(val){
 // FETCH
 // ============================================================
 async function tryFetch(url){
+  const errors=[];
   for(let i=0;i<PROXIES.length;i++){
     try{
       setStatus(`⏳ Trying ${i+1}/${PROXIES.length}...`);
@@ -909,15 +910,22 @@ async function tryFetch(url){
       const data=json.contents?JSON.parse(json.contents):json;
       const closes=data?.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
       const timestamps=data?.chart?.result?.[0]?.timestamp; // unix seconds per bar, straight from Yahoo
-      if(!closes||closes.length<2)throw new Error('no data');
+      if(!closes||closes.length<2)throw new Error('no data in response');
       const cleanC=[],cleanT=[];
       closes.forEach((v,idx)=>{if(v!=null&&!isNaN(v)){cleanC.push(v);cleanT.push(timestamps?timestamps[idx]:null);}});
-      if(cleanC.length<2)throw new Error('empty');
+      if(cleanC.length<2)throw new Error('all values empty/null');
+      lastFetchErrors=[]; // success — clear any prior failure trail
       return{closes:cleanC,timestamps:cleanT};
-    }catch(e){console.warn(`Proxy ${i+1}:`,e.message);}
+    }catch(e){
+      const label=i===0?'direct':PROXIES[i]('').includes('corsproxy')?'corsproxy.io':'allorigins.win';
+      errors.push(`${label}: ${e.message}`);
+      console.warn(`Proxy ${i+1}:`,e.message);
+    }
   }
+  lastFetchErrors=errors; // all proxies failed — keep the trail so the UI can show WHY, not just "failed"
   return null;
 }
+let lastFetchErrors=[];
 
 async function fetchAndUpdate(){
   if(dataSource==='test'){
@@ -949,8 +957,10 @@ async function fetchAndUpdate(){
     setStatus(`<span style="color:#ef5350;animation:pulse 1.5s infinite;display:inline-block">●</span> Live · ${liveData.length} bars · <span id="cd">${cdVal}</span>s${freshTxt}`);
     document.getElementById('last-update').textContent='Updated: '+new Date().toLocaleTimeString('en-IN');
   }else{
-    if(liveData.length===0){liveData=TEST_LIVE;setStatus('⚠️ Yahoo failed · test data');}
-    else setStatus(`⚠️ Refresh failed · ${liveData.length} bars`);
+    // show WHY it failed, not just that it failed — hover/hold isn't needed, the reason is right there
+    const reasonTxt=lastFetchErrors.length?` <span style="color:#f0b429" title="${lastFetchErrors.join(' | ').replace(/"/g,'&quot;')}">(${lastFetchErrors[lastFetchErrors.length-1]})</span>`:'';
+    if(liveData.length===0){liveData=TEST_LIVE;setStatus('⚠️ Yahoo failed · test data'+reasonTxt);}
+    else setStatus(`⚠️ Refresh failed · ${liveData.length} bars${reasonTxt}`);
   }
   buildAll();calcAllSim();renderTable();draw();startCD();
 }
