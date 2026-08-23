@@ -812,6 +812,7 @@ const TEST_LIVE = [
 // ============================================================
 const START_HOUR=9,START_MIN=15,REFRESH_MS=60000;
 const YAHOO='https://query1.finance.yahoo.com/v8/finance/chart/%5ENSEI?interval=1m&range=1d';
+const SERVER_DATA_URL='http://45.195.229.42:8080/data.json';
 const PROXIES=[
   u=>u,
   u=>`https://corsproxy.io/?${encodeURIComponent(u)}`,
@@ -900,6 +901,28 @@ window.setPreOpen=function(val){
 // ============================================================
 // FETCH
 // ============================================================
+// Tries OUR OWN SERVER first — it talks to Yahoo directly (no CORS issue
+// server-side) and has been completely reliable all week, unlike the free
+// third-party CORS proxies below. Falls back to the old proxy chain
+// automatically if the server's ever unreachable, so nothing breaks if the
+// server is down or restarting.
+async function tryFetchServer(){
+  try{
+    const res=await fetch(SERVER_DATA_URL+'?nc='+Date.now(),{mode:'cors',cache:'no-store'});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    if(!data.actual||data.actual.length<2)throw new Error('no data yet');
+    // server already stores change-from-its-own-anchor; reconstruct raw closes so the
+    // rest of the pipeline (PRE_OPEN handling etc.) behaves identically regardless of source
+    const raw=data.actual.map(v=>v+data.anchor);
+    const updatedMs=new Date(data.updated_at).getTime();
+    return{closes:raw,updatedMs,source:'server'};
+  }catch(e){
+    console.warn('Server fetch failed, falling back to proxies:',e.message);
+    return null;
+  }
+}
+
 async function tryFetch(url){
   const errors=[];
   for(let i=0;i<PROXIES.length;i++){
@@ -937,6 +960,28 @@ async function fetchAndUpdate(){
     setStatus(`📋 Test · ${TEST_LIVE.length} bars`);
     buildAll();calcAllSim();renderTable();draw();return;
   }
+
+  // try our own server first
+  const serverResult=await tryFetchServer();
+  if(serverResult&&serverResult.closes.length>1){
+    const raw=serverResult.closes;
+    liveRaw=raw;
+    const base=PRE_OPEN||raw[0];
+    liveData=raw.map(v=>+(v-base).toFixed(2));
+    let freshTxt='';
+    if(serverResult.updatedMs){
+      const ageMin=Math.round((Date.now()-serverResult.updatedMs)/60000);
+      if(ageMin>=3){freshTxt=` · <span style="color:#f0b429">⚠️ server data is ~${ageMin}m old</span>`;}
+      dataDateStr=new Date(serverResult.updatedMs).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric',weekday:'long'});
+      document.getElementById('page-date').textContent=dataDateStr;
+    }
+    setStatus(`<span style="color:#26a69a;animation:pulse 1.5s infinite;display:inline-block">●</span> Live (server) · ${liveData.length} bars · <span id="cd">${cdVal}</span>s${freshTxt}`);
+    document.getElementById('last-update').textContent='Updated: '+new Date().toLocaleTimeString('en-IN');
+    buildAll();calcAllSim();renderTable();draw();startCD();
+    return;
+  }
+
+  // fallback — server unreachable, use the old CORS-proxy path exactly as before
   const result=await tryFetch(YAHOO);
   if(result&&result.closes.length>1){
     const raw=result.closes;
@@ -956,12 +1001,12 @@ async function fetchAndUpdate(){
       dataDateStr=new Date(lastTs*1000).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric',weekday:'long'});
       document.getElementById('page-date').textContent=dataDateStr;
     }
-    setStatus(`<span style="color:#ef5350;animation:pulse 1.5s infinite;display:inline-block">●</span> Live · ${liveData.length} bars · <span id="cd">${cdVal}</span>s${freshTxt}`);
+    setStatus(`<span style="color:#ef5350;animation:pulse 1.5s infinite;display:inline-block">●</span> Live (proxy fallback) · ${liveData.length} bars · <span id="cd">${cdVal}</span>s${freshTxt}`);
     document.getElementById('last-update').textContent='Updated: '+new Date().toLocaleTimeString('en-IN');
   }else{
     // show WHY it failed, not just that it failed — hover/hold isn't needed, the reason is right there
     const reasonTxt=lastFetchErrors.length?` <span style="color:#f0b429" title="${lastFetchErrors.join(' | ').replace(/"/g,'&quot;')}">(${lastFetchErrors[lastFetchErrors.length-1]})</span>`:'';
-    if(liveData.length===0){liveData=TEST_LIVE;setStatus('⚠️ Yahoo failed · test data'+reasonTxt);}
+    if(liveData.length===0){liveData=TEST_LIVE;setStatus('⚠️ Server + Yahoo both failed · test data'+reasonTxt);}
     else setStatus(`⚠️ Refresh failed · ${liveData.length} bars${reasonTxt}`);
   }
   buildAll();calcAllSim();renderTable();draw();startCD();
