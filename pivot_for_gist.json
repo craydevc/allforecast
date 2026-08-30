@@ -1,0 +1,22 @@
+[
+  {
+    "price": 25260.0,
+    "tolerance": 10.0,
+    "type": "bear"
+  },
+  {
+    "price": 25183.0,
+    "tolerance": 8.0,
+    "type": "bear"
+  },
+  {
+    "price": 25115.0,
+    "tolerance": 8.0,
+    "type": "bull"
+  },
+  {
+    "price": 25020.0,
+    "tolerance": 8.0,
+    "type": "bull"
+  }
+]

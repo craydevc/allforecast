@@ -1,0 +1,5 @@
+[
+  {"instrument": "NIFTY FUT", "price": 25270, "tolerance": 10, "type": "bear"},
+  {"instrument": "ATM CE", "price": 120, "tolerance": 5, "type": "bear"},
+  {"instrument": "ATM PE", "price": 95, "tolerance": 5, "type": "bull"}
+]
