@@ -953,7 +953,7 @@ const EXTRA_PIVOT_CONFIG_URL='https://raw.githubusercontent.com/craydevc/allfore
 const FORECAST_COLORS=['#26a69a','#f0b429','#e040fb','#42a5f5','#ff7043','#ab47bc'];
 
 async function loadExternalConfig(){
-  // forecasts.json format: {"Model A- 28 Aug 2026- sw": [..numbers..], "Model B": [...]}
+  // forecasts.json format: {"Model A- 28 Aug 2026- sw3008:": [..numbers..], "Model B": [...]}
   if(FORECASTS_CONFIG_URL&&!FORECASTS_CONFIG_URL.startsWith('PASTE_')){
     try{
       const res=await fetch(FORECASTS_CONFIG_URL+'?nc='+Date.now(),{cache:'no-store'});
