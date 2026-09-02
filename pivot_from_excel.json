@@ -1,0 +1,137 @@
+[
+  {
+    "price": 24800.0,
+    "tolerance": 5,
+    "type": "bear"
+  },
+  {
+    "price": 24762.0,
+    "tolerance": 5,
+    "type": "bear"
+  },
+  {
+    "price": 24757.0,
+    "tolerance": 5,
+    "type": "bull"
+  },
+  {
+    "price": 24756.0,
+    "tolerance": 5,
+    "type": "bear"
+  },
+  {
+    "price": 24741.0,
+    "tolerance": 5,
+    "type": "bear"
+  },
+  {
+    "price": 24740.0,
+    "tolerance": 5,
+    "type": "bull"
+  },
+  {
+    "price": 24517.0,
+    "tolerance": 5,
+    "type": "bear"
+  },
+  {
+    "price": 24511.0,
+    "tolerance": 5,
+    "type": "bull"
+  },
+  {
+    "price": 24472.0,
+    "tolerance": 5,
+    "type": "bear"
+  },
+  {
+    "price": 24469.0,
+    "tolerance": 5,
+    "type": "bull"
+  },
+  {
+    "price": 24453.0,
+    "tolerance": 5,
+    "type": "bear"
+  },
+  {
+    "price": 24450.0,
+    "tolerance": 5,
+    "type": "bear"
+  },
+  {
+    "price": 24349.0,
+    "tolerance": 5,
+    "type": "bear"
+  },
+  {
+    "price": 24272.0,
+    "tolerance": 5,
+    "type": "bear"
+  },
+  {
+    "price": 24270.0,
+    "tolerance": 5,
+    "type": "bull"
+  },
+  {
+    "price": 24245.0,
+    "tolerance": 5,
+    "type": "bear"
+  },
+  {
+    "price": 24236.0,
+    "tolerance": 5,
+    "type": "bull"
+  },
+  {
+    "price": 24184.0,
+    "tolerance": 5,
+    "type": "bear"
+  },
+  {
+    "price": 24172.0,
+    "tolerance": 5,
+    "type": "bull"
+  },
+  {
+    "price": 24104.0,
+    "tolerance": 5,
+    "type": "bear"
+  },
+  {
+    "price": 24101.0,
+    "tolerance": 5,
+    "type": "bull"
+  },
+  {
+    "price": 24033.0,
+    "tolerance": 5,
+    "type": "bear"
+  },
+  {
+    "price": 24031.0,
+    "tolerance": 5,
+    "type": "bear"
+  },
+  {
+    "price": 24011.0,
+    "tolerance": 5,
+    "type": "bear"
+  },
+  {
+    "price": 24009.0,
+    "tolerance": 5,
+    "type": "bear"
+  },
+  {
+    "price": 23997.0,
+    "tolerance": 5,
+    "type": "bull"
+  },
+  {
+    "price": 23896.0,
+    "tolerance": 5,
+    "type": "bull"
+  }
+]
