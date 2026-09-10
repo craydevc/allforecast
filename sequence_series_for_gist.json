@@ -1,5 +1,4 @@
-[
-  {    "series": "S1",    "price": 23431.5,    "dir": "up"},
+[{    "series": "S1",    "price": 23431.5,    "dir": "up"},
 {    "series": "S2",    "price": 23712.55,    "dir": "down"},
 {    "series": "S2",    "price": 23677.1333333333,    "dir": "down"},
 {    "series": "S2",    "price": 23525.3875,    "dir": "down"},
