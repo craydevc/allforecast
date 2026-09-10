@@ -1,0 +1,42 @@
+[
+  {
+    "series": "S1",
+    "price": 23431,
+    "dir": "up"
+  },
+  {
+    "series": "S1",
+    "price": 23664,
+    "dir": "up"
+  },
+  {
+    "series": "S1",
+    "price": 23834,
+    "dir": "up"
+  },
+  {
+    "series": "S1",
+    "price": 23939,
+    "dir": "up"
+  },
+  {
+    "series": "S1",
+    "price": 24024,
+    "dir": "up"
+  },
+  {
+    "series": "S1",
+    "price": 24115,
+    "dir": "up"
+  },
+  {
+    "series": "S2",
+    "price": 24153,
+    "dir": "down"
+  },
+  {
+    "series": "S3",
+    "price": 24105,
+    "dir": "up"
+  }
+]
