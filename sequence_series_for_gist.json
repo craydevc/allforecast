@@ -1,42 +1,32 @@
 [
-  {
-    "series": "S1",
-    "price": 23431,
-    "dir": "up"
-  },
-  {
-    "series": "S1",
-    "price": 23664,
-    "dir": "up"
-  },
-  {
-    "series": "S1",
-    "price": 23834,
-    "dir": "up"
-  },
-  {
-    "series": "S1",
-    "price": 23939,
-    "dir": "up"
-  },
-  {
-    "series": "S1",
-    "price": 24024,
-    "dir": "up"
-  },
-  {
-    "series": "S1",
-    "price": 24115,
-    "dir": "up"
-  },
-  {
-    "series": "S2",
-    "price": 24153,
-    "dir": "down"
-  },
-  {
-    "series": "S3",
-    "price": 24105,
-    "dir": "up"
-  }
-]
+  {    "series": "S1",    "price": 23431.5,    "dir": "up"},
+{    "series": "S2",    "price": 23712.55,    "dir": "down"},
+{    "series": "S2",    "price": 23677.1333333333,    "dir": "down"},
+{    "series": "S2",    "price": 23525.3875,    "dir": "down"},
+{    "series": "S2",    "price": 23472.82,    "dir": "down"},
+{    "series": "S2",    "price": 23257.775,    "dir": "down"},
+{    "series": "S3",    "price": 23118.6428571429,    "dir": "up"},
+{    "series": "S3",    "price": 23313.7375,    "dir": "up"},
+{    "series": "S3",    "price": 23492.1888888889,    "dir": "up"},
+{    "series": "S3",    "price": 23712.295,    "dir": "up"},
+{    "series": "S3",    "price": 23858.3090909091,    "dir": "up"},
+{    "series": "S3",    "price": 23920.6125,    "dir": "up"},
+{    "series": "S3",    "price": 23960.0038461538,    "dir": "up"},
+{    "series": "S3",    "price": 23986.9678571429,    "dir": "up"},
+{    "series": "S3",    "price": 24027.7433333333,    "dir": "up"},
+{    "series": "S4",    "price": 24055.571875,    "dir": "down"},
+{    "series": "S4",    "price": 24048.5235294118,    "dir": "down"},
+{    "series": "S4",    "price": 23920.475,    "dir": "down"},
+{    "series": "S4",    "price": 23817.5342105263,    "dir": "down"},
+{    "series": "S4",    "price": 23731.9,    "dir": "down"},
+{    "series": "S4",    "price": 23686.9,    "dir": "down"},
+{    "series": "S4",    "price": 23676.6068181818,    "dir": "down"},
+{    "series": "S5",    "price": 23658.6304347826,    "dir": "up"},
+{    "series": "S5",    "price": 23675.9333333333,    "dir": "up"},
+{    "series": "S5",    "price": 23719.022,    "dir": "up"},
+{    "series": "S5",    "price": 23725.7403846154,    "dir": "up"},
+{    "series": "S6",    "price": 23735.6277777778,    "dir": "down"},
+{    "series": "S6",    "price": 23647.9785714286,    "dir": "down"},
+{    "series": "S6",    "price": 23584.9810344828,    "dir": "down"},
+{    "series": "S6",    "price": 23524.7366666667,    "dir": "down"},
+{    "series": "S6",    "price": 23466.2032258065,    "dir": "down"}]
