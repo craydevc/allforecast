@@ -981,7 +981,7 @@ let mouseX=-1,mouseY=-1,W,H;
 const FORECASTS_CONFIG_URL='https://raw.githubusercontent.com/craydevc/allforecast/refs/heads/main/forecasts_for_gist.json';
 const PIVOT_CONFIG_URL='https://raw.githubusercontent.com/craydevc/allforecast/refs/heads/main/pivot_for_gist.json';
 const EXTRA_PIVOT_CONFIG_URL='https://raw.githubusercontent.com/craydevc/allforecast/refs/heads/main/extra_pivots_for_gist.json';
-const SEQUENCE_CONFIG_URL='https://raw.githubusercontent.com/craydevc/allforecast/refs/heads/main/sequence_series_for_gist.json';
+const SEQUENCE_CONFIG_URL='PASTE_YOUR_SEQUENCE_SERIES_RAW_URL_HERE';
 const FORECAST_COLORS=['#26a69a','#f0b429','#e040fb','#42a5f5','#ff7043','#ab47bc'];
 
 async function loadExternalConfig(){
@@ -2139,38 +2139,17 @@ function draw(){
     if(i%step===0)ctx.fillText(d.label,pxX(i,cw),H-PAD.B+14);
   });
 
-  // Hunt or Farm Pivot lines — drawn directly on the live chart. Levels are given in
-  // real Nifty price terms; converting to the chart's existing zero-based (change-from-
-  // open) units, rather than adding a second axis, keeps everything on one simple scale.
-  if(PIVOT_LEVELS&&PIVOT_LEVELS.length&&liveRaw&&liveRaw.length&&liveData&&liveData.length){
-    const base=liveRaw[0]-liveData[0]; // same anchor used to build liveData in the first place
-    PIVOT_LEVELS.forEach(lv=>{
-      const chartVal=lv.price-base;
-      const chartLo=chartVal-lv.tolerance,chartHi=chartVal+lv.tolerance;
-      const yMid=pxY(chartVal,lo,hi),yLo=pxY(chartHi,lo,hi),yHi=pxY(chartLo,lo,hi);
-      if(yMid<PAD.T-20||yMid>H-PAD.B+20)return; // well outside visible range — skip, avoids clutter
-      const col=lv.type==='bear'?'#ef5350':'#26a69a';
-      ctx.fillStyle=col+'18';ctx.fillRect(PAD.L,Math.max(PAD.T,yLo),W-PAD.L-PAD.R,Math.min(H-PAD.B,yHi)-Math.max(PAD.T,yLo));
-      ctx.strokeStyle=col;ctx.lineWidth=1;ctx.setLineDash([5,3]);
-      ctx.beginPath();ctx.moveTo(PAD.L,yMid);ctx.lineTo(W-PAD.R,yMid);ctx.stroke();ctx.setLineDash([]);
-      const w=PIVOT_WORDING[lv.type];
-      ctx.fillStyle=col;ctx.font='bold 9px monospace';ctx.textAlign='left';
-      ctx.fillText(`${lv.price} · ${w.name}`,PAD.L+4,yMid-3);
-    });
-  }
+  // (Old zone-based Pivot chart lines removed — the Hunt or Farm Series line above now
+  // covers this role instead, tied to the actual continuous price path.)
 
-  // Hunt or Farm Series — one CONTINUOUS connected line through your given series data
-  // (S1-1, S1-2... S2-1... S3-1...). Color is decided ONCE per series (by that series'
-  // first point's direction) — a whole series stays one shade of green (bull) or red
-  // (bear) throughout, and the color only changes at a genuine reversal (a new series
-  // starting). Same-direction series get progressively lighter shades so consecutive
-  // bull (or bear) runs are still visually distinguishable from each other. Dotted line
-  // style, so it reads as clearly different from the dashed Pivot zone lines.
+  // Hunt or Farm Series — each point drawn as its own HORIZONTAL line across the chart
+  // (same style as the original Pivot bands), not a diagonal connected path. Points are
+  // grouped and colored by series: a whole series (S1-1 through S1-6, say) shares one
+  // shade of green (bull) or red (bear), decided by that series' first point. Same-
+  // direction series get progressively lighter shades so consecutive bull (or bear) runs
+  // stay visually distinguishable from each other. The series name labels its first line.
   if(SEQUENCE_SERIES_DATA&&SEQUENCE_SERIES_DATA.length&&liveRaw&&liveRaw.length&&liveData&&liveData.length){
     const base=liveRaw[0]-liveData[0];
-    const n=SEQUENCE_SERIES_DATA.length;
-    const seqX=i=>PAD.L+(i/(n-1))*(W-PAD.L-PAD.R);
-    const seqY=i=>pxY(SEQUENCE_SERIES_DATA[i].price-base,lo,hi);
     const GREEN_SHADES=['#1b5e20','#2e7d32','#43a047','#66bb6a','#a5d6a7'];
     const RED_SHADES=['#b71c1c','#c62828','#e53935','#ef5350','#ef9a9a'];
     let greenCount=0,redCount=0;
@@ -2181,26 +2160,19 @@ function draw(){
         else{seriesColor[pt.series]=RED_SHADES[redCount%RED_SHADES.length];redCount++;}
       }
     });
-    ctx.lineWidth=2;ctx.lineJoin='round';ctx.setLineDash([2,3]);
-    for(let i=0;i<n-1;i++){
-      const y1=seqY(i),y2=seqY(i+1);
-      if((y1<PAD.T-30&&y2<PAD.T-30)||(y1>H-PAD.B+30&&y2>H-PAD.B+30))continue;
-      // the segment leading INTO point i+1 takes point i+1's series color — so the exact
-      // moment a new series starts (a reversal) is where the color visibly changes
-      ctx.strokeStyle=seriesColor[SEQUENCE_SERIES_DATA[i+1].series];
-      ctx.beginPath();ctx.moveTo(seqX(i),y1);ctx.lineTo(seqX(i+1),y2);ctx.stroke();
-    }
-    ctx.setLineDash([]);
-    // label each series' starting point
     let lastSeries=null;
-    SEQUENCE_SERIES_DATA.forEach((pt,i)=>{
-      if(pt.series!==lastSeries){
-        lastSeries=pt.series;
-        const y=seqY(i);
-        if(y>=PAD.T-20&&y<=H-PAD.B+20){
-          ctx.fillStyle=seriesColor[pt.series];ctx.font='bold 9px monospace';ctx.textAlign='center';
-          ctx.fillText(pt.series,seqX(i),y-6);
-        }
+    SEQUENCE_SERIES_DATA.forEach(pt=>{
+      const chartVal=pt.price-base;
+      const y=pxY(chartVal,lo,hi);
+      if(y<PAD.T-20||y>H-PAD.B+20)return; // well outside visible range — skip, avoids clutter
+      const col=seriesColor[pt.series];
+      ctx.strokeStyle=col;ctx.lineWidth=1;ctx.setLineDash([2,3]);
+      ctx.beginPath();ctx.moveTo(PAD.L,y);ctx.lineTo(W-PAD.R,y);ctx.stroke();ctx.setLineDash([]);
+      const isSeriesStart=pt.series!==lastSeries;
+      lastSeries=pt.series;
+      if(isSeriesStart){
+        ctx.fillStyle=col;ctx.font='bold 9px monospace';ctx.textAlign='left';
+        ctx.fillText(`${pt.price} · ${pt.series}`,PAD.L+4,y-3);
       }
     });
   }
