@@ -2142,37 +2142,64 @@ function draw(){
   // (Old zone-based Pivot chart lines removed — the Hunt or Farm Series line above now
   // covers this role instead, tied to the actual continuous price path.)
 
-  // Hunt or Farm Series — each point drawn as its own HORIZONTAL line across the chart
-  // (same style as the original Pivot bands), not a diagonal connected path. Points are
-  // grouped and colored by series: a whole series (S1-1 through S1-6, say) shares one
-  // shade of green (bull) or red (bear), decided by that series' first point. Same-
-  // direction series get progressively lighter shades so consecutive bull (or bear) runs
-  // stay visually distinguishable from each other. The series name labels its first line.
+  // Hunt or Farm Series — each point drawn as its own HORIZONTAL line across the chart.
+  // The FIRST point of each named series (its actual reversal moment) is drawn BOLD/solid
+  // so it stands out; every later point in that same series is thin/dotted (just the
+  // ongoing trail). Small arrows show flow between consecutive points of the same series —
+  // capped in density for long series so it doesn't add as much clutter as the lines
+  // themselves. Colors: green=up, red=down, lighter shades for repeat same-direction series.
   if(SEQUENCE_SERIES_DATA&&SEQUENCE_SERIES_DATA.length&&liveRaw&&liveRaw.length&&liveData&&liveData.length){
     const base=liveRaw[0]-liveData[0];
     const GREEN_SHADES=['#1b5e20','#2e7d32','#43a047','#66bb6a','#a5d6a7'];
     const RED_SHADES=['#b71c1c','#c62828','#e53935','#ef5350','#ef9a9a'];
     let greenCount=0,redCount=0;
-    const seriesColor={};
+    const seriesColor={},seriesXSlot={},seriesPoints={};
+    let slotIdx=0;
     SEQUENCE_SERIES_DATA.forEach(pt=>{
       if(!(pt.series in seriesColor)){
         if(pt.dir==='up'){seriesColor[pt.series]=GREEN_SHADES[greenCount%GREEN_SHADES.length];greenCount++;}
         else{seriesColor[pt.series]=RED_SHADES[redCount%RED_SHADES.length];redCount++;}
+        seriesXSlot[pt.series]=slotIdx++; // each series gets its own fixed x-position for its arrows
       }
+      (seriesPoints[pt.series]=seriesPoints[pt.series]||[]).push(pt);
     });
-    let lastSeries=null;
+    const totalSeries=Math.max(1,slotIdx);
+    const seenSeries=new Set(); // tracks TRUE first-ever appearance, even if series names interleave in the list
     SEQUENCE_SERIES_DATA.forEach(pt=>{
       const chartVal=pt.price-base;
       const y=pxY(chartVal,lo,hi);
       if(y<PAD.T-20||y>H-PAD.B+20)return; // well outside visible range — skip, avoids clutter
       const col=seriesColor[pt.series];
-      ctx.strokeStyle=col;ctx.lineWidth=1;ctx.setLineDash([2,3]);
+      const isSeriesStart=!seenSeries.has(pt.series);
+      seenSeries.add(pt.series);
+      if(isSeriesStart){
+        ctx.strokeStyle=col;ctx.lineWidth=2;ctx.setLineDash([]); // bold solid — the actual reversal point
+      }else{
+        ctx.strokeStyle=col;ctx.lineWidth=1;ctx.setLineDash([2,3]); // thin dotted — just the ongoing trail
+      }
       ctx.beginPath();ctx.moveTo(PAD.L,y);ctx.lineTo(W-PAD.R,y);ctx.stroke();ctx.setLineDash([]);
-      const isSeriesStart=pt.series!==lastSeries;
-      lastSeries=pt.series;
       if(isSeriesStart){
         ctx.fillStyle=col;ctx.font='bold 9px monospace';ctx.textAlign='left';
-        ctx.fillText(`${pt.price} · ${pt.series}`,PAD.L+4,y-3);
+        const targetTxt=pt.target?` → ~${pt.target}`:'';
+        ctx.fillText(`${pt.price} · ${pt.series}${targetTxt}`,PAD.L+4,y-3);
+      }
+    });
+    // directional arrows between consecutive points of the SAME series, at that series'
+    // own dedicated x-slot so different series' arrows don't collide with each other
+    Object.keys(seriesPoints).forEach(sname=>{
+      const pts=seriesPoints[sname];
+      if(pts.length<2)return;
+      const x=PAD.L+40+(seriesXSlot[sname]/totalSeries)*(W-PAD.L-PAD.R-80);
+      const step=Math.max(1,Math.ceil(pts.length/8)); // cap density — long series only get ~8 arrows, not one per point
+      for(let i=0;i<pts.length-1;i+=step){
+        const y1=pxY(pts[i].price-base,lo,hi),y2=pxY(pts[i+1].price-base,lo,hi);
+        if((y1<PAD.T-20&&y2<PAD.T-20)||(y1>H-PAD.B+20&&y2>H-PAD.B+20))continue;
+        const col=pts[i+1].dir==='up'?'#26a69a':'#ef5350';
+        ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(x,y1);ctx.lineTo(x,y2);ctx.stroke();
+        // small arrowhead pointing the direction of travel
+        const dir=y2<y1?-1:1; // canvas y is inverted — up on screen = smaller y
+        ctx.beginPath();ctx.moveTo(x-3,y2-dir*5);ctx.lineTo(x+3,y2-dir*5);ctx.lineTo(x,y2);ctx.closePath();ctx.fill();
       }
     });
   }
